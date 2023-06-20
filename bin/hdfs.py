@@ -377,7 +377,7 @@ class HDFSCHECk():
                 MemHeapCommittedM = dic["MemHeapCommittedM"]
                 # 百分比计算
                 namenode_heap_used_percent = "{:.2%}".format(MemHeapUsedM / MemHeapCommittedM)
-                print(namenode_heap_used_percent)
+                # print(namenode_heap_used_percent)
 
                 #测试判断逻辑
                 # namenode_heap_used_percent = "77.49%"
@@ -390,6 +390,110 @@ class HDFSCHECk():
                     print("HDFSNameNode堆内存使用率超过90%")
                 else:
                     print("HDFSNameNode堆内存使用率为%s" % namenode_heap_used_percent)
+
+            """
+            空间使用率: 采集指标
+            PercentUsed
+            """
+            if dic["name"] == "Hadoop:service=NameNode,name=NameNodeInfo":
+                PercentUsed = "{:.2%}".format(dic["PercentUsed"]/100)
+                # print(PercentUsed)
+
+                #测试判断逻辑
+                # PercentUsed = "77.49%"
+                # PercentUsed = "91.49%"
+
+                # 判断返回指标：
+                if float(PercentUsed.strip("%")) >= 70 and float(PercentUsed.strip("%")) < 90:
+                    print("HDFS使用率超过70%")
+                elif float(PercentUsed.strip("%")) >= 90:
+                    print("HDFS使用率超过90%")
+                else:
+                    print("HDFS使用率超过%s" % PercentUsed)
+
+
+                """
+                liveNodes node: liveNodes
+                DeadNodes
+                打印数量
+                """
+                # #Hadoop:service=NameNode,name=NameNodeInfo
+                # liveNodes 指标
+                # DeadNodes
+                LiveNodes = dic["LiveNodes"]
+                #字符串转字典格式
+                # livenodes = eval(LiveNodes)
+                livenodes = json.loads(LiveNodes)
+                hosts=livenodes.keys()
+                # 存活节点数：livenodes_num
+                livenodes_num = len(hosts)
+                print("LiveNodes 数量： %s" % (livenodes_num))
+
+
+
+                """
+                DeadNodes node: DeadNodes
+                DeadNodes
+                打印IP?
+                """
+                DeadNodes = dic["DeadNodes"]
+                #字符串转字典格式
+                deadnodes = json.loads(DeadNodes)
+                hosts=deadnodes.keys()
+                # 存活节点数：deadnodes
+                deadnnode_num = len(hosts)
+                print("DeadNodes 数量： %s" % (deadnnode_num))
+
+                # # hosts = dict.keys(livenodes)
+                # # print(hosts)
+                # for host_port in hosts:
+                #     host = host_port.split(":")[0]
+                #     port = host_port.split(":")[1]
+                #     value = livenodes.get(host_port)
+                #     print(value)
+                #     # value_ofhost = eval(value)
+                #     ipaddr = value["infoAddr"].split(":")[0]
+                #     print(ipaddr)
+                #     exit(0)
+
+                """
+                datanode is down
+                """
+                deadnnode_list = []
+                if deadnnode_num != 0:
+                    for host_ip in deadnodes.keys():
+                        host, port = host_ip.split(":")
+                        # print(host)
+                        # print(port)
+                        ip = deadnodes.get(host_ip).get("xferaddr").split(":")[0]
+                        # print(ip)
+                        host_ip = "%s#%s" %(host, ip)
+                        deadnnode_list.append(host_ip)
+
+                for host_ip in deadnnode_list:
+                    hostname, ip = host_ip.split("#")
+                    print("deadnode 主机名：%s ip: %s is down." % (hostname, ip))
+
+
+
+
+
+
+
+
+            """
+            集群DN节点磁盘(Total Datanode Volume Failures）
+            采集指标：VolumeFailuresTotal
+            Hadoop:service=NameNode,name=FSNamesystem
+            """
+            if dic["name"] == "Hadoop:service=NameNode,name=FSNamesystem":
+                # 集群DN节点磁盘(Total Datanode Volume Failures）
+                VolumeFailuresTotal = dic["VolumeFailuresTotal"]
+                print("集群DN节点磁盘(Total Datanode Volume Failures）数量: %s " % VolumeFailuresTotal)
+
+                #
+
+
 
     # 获取datanode信息
     """
@@ -423,7 +527,7 @@ def main():
 
     # 本地测试
     nn1_jmx = ""
-    with open(BASE_DIR + "/conf/hdfs/nn1jmx.json", 'r') as file:
+    with open(BASE_DIR + "/conf/hdfs/45jmx_with_deaddatanodes.json", 'r') as file:
         nn1_jmx = json.load(file)
         # print(nn1_jmx)
 
