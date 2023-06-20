@@ -26,6 +26,10 @@ import hdfs
 import krbticket
 from xml.etree import ElementTree as ET
 import socket
+import paramiko
+import warnings
+
+
 
 """带有Kerberos认证的hdfs认证"""
 """
@@ -63,7 +67,7 @@ sys.path.append(BASE_DIR)
 # from conf import Alarm as Alarm, Logger as Logger
 from conf import Logger as Logger
 
-
+warnings.filterwarnings('ignore')
 class HDFSCHECk():
 
     def __init__(self):
@@ -379,12 +383,13 @@ class HDFSCHECk():
                 namenode_heap_used_percent = "{:.2%}".format(MemHeapUsedM / MemHeapCommittedM)
                 # print(namenode_heap_used_percent)
 
-                #测试判断逻辑
+                # 测试判断逻辑
                 # namenode_heap_used_percent = "77.49%"
                 # namenode_heap_used_percent = "91.49%"
 
                 # 判断返回指标：
-                if float(namenode_heap_used_percent.strip("%")) >= 70 and float(namenode_heap_used_percent.strip("%")) < 90:
+                if float(namenode_heap_used_percent.strip("%")) >= 70 and float(
+                        namenode_heap_used_percent.strip("%")) < 90:
                     print("HDFSNameNode堆内存使用率超过70%")
                 elif float(namenode_heap_used_percent.strip("%")) >= 90:
                     print("HDFSNameNode堆内存使用率超过90%")
@@ -396,10 +401,10 @@ class HDFSCHECk():
             PercentUsed
             """
             if dic["name"] == "Hadoop:service=NameNode,name=NameNodeInfo":
-                PercentUsed = "{:.2%}".format(dic["PercentUsed"]/100)
+                PercentUsed = "{:.2%}".format(dic["PercentUsed"] / 100)
                 # print(PercentUsed)
 
-                #测试判断逻辑
+                # 测试判断逻辑
                 # PercentUsed = "77.49%"
                 # PercentUsed = "91.49%"
 
@@ -409,8 +414,7 @@ class HDFSCHECk():
                 elif float(PercentUsed.strip("%")) >= 90:
                     print("HDFS使用率超过90%")
                 else:
-                    print("HDFS使用率超过%s" % PercentUsed)
-
+                    print("HDFS使用率 %s" % PercentUsed)
 
                 """
                 liveNodes node: liveNodes
@@ -421,15 +425,13 @@ class HDFSCHECk():
                 # liveNodes 指标
                 # DeadNodes
                 LiveNodes = dic["LiveNodes"]
-                #字符串转字典格式
+                # 字符串转字典格式
                 # livenodes = eval(LiveNodes)
                 livenodes = json.loads(LiveNodes)
-                hosts=livenodes.keys()
+                hosts = livenodes.keys()
                 # 存活节点数：livenodes_num
                 livenodes_num = len(hosts)
                 print("LiveNodes 数量： %s" % (livenodes_num))
-
-
 
                 """
                 DeadNodes node: DeadNodes
@@ -437,9 +439,9 @@ class HDFSCHECk():
                 打印IP?
                 """
                 DeadNodes = dic["DeadNodes"]
-                #字符串转字典格式
+                # 字符串转字典格式
                 deadnodes = json.loads(DeadNodes)
-                hosts=deadnodes.keys()
+                hosts = deadnodes.keys()
                 # 存活节点数：deadnodes
                 deadnnode_num = len(hosts)
                 print("DeadNodes 数量： %s" % (deadnnode_num))
@@ -467,7 +469,7 @@ class HDFSCHECk():
                         # print(port)
                         ip = deadnodes.get(host_ip).get("xferaddr").split(":")[0]
                         # print(ip)
-                        host_ip = "%s#%s" %(host, ip)
+                        host_ip = "%s#%s" % (host, ip)
                         deadnnode_list.append(host_ip)
 
                 for host_ip in deadnnode_list:
@@ -484,29 +486,49 @@ class HDFSCHECk():
                 VolumeFailuresTotal = dic["VolumeFailuresTotal"]
                 print("集群DN节点磁盘(Total Datanode Volume Failures）数量: %s " % VolumeFailuresTotal)
 
-                #
-
-
+            """
+            Hadoop:service=NameNode,name=NameNodeStatus
+            HA状态
+            """
+            if dic["name"] == "Hadoop:service=NameNode,name=NameNodeStatus":
+                # 判断当前节点ha状态
+                HostAndPort = dic["HostAndPort"]
+                host, port = HostAndPort.split(":")
+                State = dic["State"]
+                print("主机： %s namenode的HA状态为： %s " % (host, State))
 
     # 获取datanode信息
     """
     进行一步节点数量与配置检查的节点数量检查,通过jmx获取datanode的节点数量来进行判断
+    first step
     """
 
-    def datanode_info(self):
-        pass
-
-    # 计算使用率
     def hdfs_usage_calculate(self):
         pass
 
-    # namenode ha check
-    def namenode_ha_check(self):
-        pass
+    """
+    指标抓取单项检查：
+    namenode服务是否 down
+    NameNode is down
+    综合检查，首要检查服务是否宕机，namenode正常才进行其他检查
+    """
 
-    # namenode heap mem check
-    def namenode_heap_mem_check(self):
-        pass
+    def Namenode_is_down(self):
+        #
+        # def hdfs_usage_calculate(self):
+        nn1_ip = self.nn1
+        nn1_port = self.nn1_port
+
+        nn2_ip = self.nn2
+        nn2_port = self.nn2_port
+
+        if self.socket_check(ip=nn1_ip, port=nn1_port) == "false":
+            print("端口检查失败，%s 端口检查不通" % self.nn1)
+        if self.socket_check(ip=nn2_ip, port=nn2_port) == "false":
+            print("端口检查失败，%s 端口检查不通" % self.nn1)
+        if self.socket_check(ip=nn1_ip, port=nn1_port) == "false" and self.socket_check(ip=nn2_ip,
+                                                                                        port=nn2_port) == "false":
+            pass
 
 
 def main():
@@ -520,7 +542,7 @@ def main():
 
     # 本地测试
     nn1_jmx = ""
-    with open(BASE_DIR + "/conf/hdfs/45jmx_with_deaddatanodes.json", 'r') as file:
+    with open(BASE_DIR + "/conf/hdfs/谢明轩_2023-06-19-16-52-12.txt", 'r') as file:
         nn1_jmx = json.load(file)
         # print(nn1_jmx)
 
