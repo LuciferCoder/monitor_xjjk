@@ -285,7 +285,8 @@ class HDFSCHECk():
             exit(103)
 
         # 检查通过，则进行下一步 ,调用 namenode_api_info
-        jsoncont_all_cont1, jsoncont_all_cont2 = self.namenode_api_info(nn1_clustername_from_hdfssite, nn2_clustername_from_hdfssite)
+        jsoncont_all_cont1, jsoncont_all_cont2 = self.namenode_api_info(nn1_clustername_from_hdfssite,
+                                                                        nn2_clustername_from_hdfssite)
 
         self.nn1_jmx = jsoncont_all_cont1
         self.nn2_jmx = jsoncont_all_cont2
@@ -326,7 +327,6 @@ class HDFSCHECk():
 
         return jsoncont_all_cont1, jsoncont_all_cont2
 
-
     # 端口连通性检查
     def socket_check(self, ip, port):
         print("调用函数 socket_check 成功")
@@ -357,6 +357,7 @@ class HDFSCHECk():
     （12）集群DN节点磁盘(Total Datanode Volume Failures）
 
     """
+
     def nn_jmx_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
@@ -364,8 +365,31 @@ class HDFSCHECk():
         # print(beans)
         for dic in beans:
             # 开始取指标
-            pass
+            # 取namenode堆内存指标
+            """
+            指标： Hadoop:service=NameNode,name=JvmMetrics
+            百分比：MemHeapUsedM/MemHeapCommittedM
+            Namenode 堆内存使用率
+            HeapMemoryUsage.used/HeapMemoryUsage.committed
+            """
+            if dic["name"] == "Hadoop:service=NameNode,name=JvmMetrics":
+                MemHeapUsedM = dic["MemHeapUsedM"]
+                MemHeapCommittedM = dic["MemHeapCommittedM"]
+                # 百分比计算
+                namenode_heap_used_percent = "{:.2%}".format(MemHeapUsedM / MemHeapCommittedM)
+                print(namenode_heap_used_percent)
 
+                #测试判断逻辑
+                # namenode_heap_used_percent = "77.49%"
+                # namenode_heap_used_percent = "91.49%"
+
+                # 判断返回指标：
+                if float(namenode_heap_used_percent.strip("%")) >= 70 and float(namenode_heap_used_percent.strip("%")) < 90:
+                    print("HDFSNameNode堆内存使用率超过70%")
+                elif float(namenode_heap_used_percent.strip("%")) >= 90:
+                    print("HDFSNameNode堆内存使用率超过90%")
+                else:
+                    print("HDFSNameNode堆内存使用率为%s" % namenode_heap_used_percent)
 
     # 获取datanode信息
     """
