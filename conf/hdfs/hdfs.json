@@ -18,9 +18,9 @@
     "hadoop_nodes": {
       "namenode": {
         "nn1": "10.0.0.47",
-        "nn1_port": "50070",
+        "nn1_port": "50470",
         "nn2": "10.0.0.45",
-        "nn2_port": "50070"
+        "nn2_port": "50470"
       },
       "resourcemanager": {
         "rm1": "10.0.0.47",
