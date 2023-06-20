@@ -1,0 +1,35 @@
+{
+  "name": "hdfs",
+  "version": "1.0.0",
+  "dependencies": {
+    "config": {
+      "use_kerberos": "true",
+      "cluster_name": "liveme_aboard",
+      "user": "hdfs",
+      "num": "4",
+      "second": "5",
+      "hdfsconf": "hdfs-sit.xml"
+    },
+    "kerberos": {
+      "krb5conf": "/etc/krb5.conf",
+      "keytab": "/export/kerber/1/hdfs.keytab",
+      "client_principle": "hdfs/ocean@JD.COM"
+    },
+    "hadoop_nodes": {
+      "namenode": {
+        "nn1": "10.0.0.47",
+        "nn1_port": "50070",
+        "nn2": "10.0.0.45",
+        "nn2_port": "50070"
+      },
+      "resourcemanager": {
+        "rm1": "10.0.0.47",
+        "rm1_port": "8088",
+        "rm2": "10.0.0.45",
+        "rm2_port": "8088"
+      },
+      "datanode": ["192.168.61.208","192.168.61.209"],
+      "nodemanager": ["192.168.61.208","192.168.61.209"]
+    }
+  }
+}

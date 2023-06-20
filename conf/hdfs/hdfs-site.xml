@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- 此配置文件为测试配置文件，应当拷贝集群的配置文件替换此文件 -->
+<configuration>
+
+<property>
+    <name>dfs.nameservices</name>
+    <value>ocean-bdp3</value>
+</property>
+
+
+<property>
+    <name>dfs.ha.namenodes.ocean-bdp3</name>
+    <value>nn1,nn2</value>
+</property>
+
+
+<property>
+    <name>dfs.namenode.rpc-address.ocean-bdp3.nn1</name>
+    <value>10.0.0.47:8020</value>
+</property>
+
+<property>
+    <name>dfs.namenode.rpc-address.ocean-bdp3.nn2</name>
+    <value>10.0.0.45:8020</value>
+</property>
+
+
+
+<property>
+    <name>dfs.namenode.http-address.ocean-bdp3.nn1</name>
+    <value>10.0.0.47:50070</value>
+</property>
+
+<property>
+    <name>dfs.namenode.http-address.ocean-bdp3.nn2</name>
+    <value>10.0.0.45:50070</value>
+</property>
+
+
+<property>
+    <name>dfs.namenode.https-address.ocean-bdp3.nn1</name>
+    <value>10.0.0.47:50470</value>
+</property>
+
+<!-- 修改此处的ip为主机hostname -->
+<property>
+    <name>dfs.namenode.https-address.ocean-bdp3.nn2</name>
+    <value>ocean-bigdata-1a-20:50470</value>
+</property>
+
+
+<property>
+    <name>dfs.namenode.shared.edits.dir</name>
+    <value>qjournal://10.0.0.47:8485;10.0.0.45:8485;10.0.0.42:8485/ocean-bdp3</value>
+</property>
+
+
+<property>
+    <name>dfs.journalnode.edits.dir</name>
+    <value>/export/data/hadoop/journal</value>
+</property>
+
+<property>
+    <name>dfs.ha.automatic-failover.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.client.failover.proxy.provider.ocean-bdp3</name>
+    <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+ 
+<property>
+    <name>dfs.namenode.name.dir</name>
+    <value>/export/data/hadoop/namenode</value>
+</property>
+
+<property>
+    <name>dfs.datanode.data.dir</name> 
+    <value>/export/grid/01/hadoop/hdfs/data,/export/grid/02/hadoop/hdfs/data,/export/grid/03/hadoop/hdfs/data,/export/grid/04/hadoop/hdfs/data,/export/grid/05/hadoop/hdfs/data,/export/grid/06/hadoop/hdfs/data,/export/grid/07/hadoop/hdfs/data,/export/grid/08/hadoop/hdfs/data,/export/grid/09/hadoop/hdfs/data,/export/grid/10/hadoop/hdfs/data,/export/grid/11/hadoop/hdfs/data,/export/grid/12/hadoop/hdfs/data</value>
+</property> 
+<property>
+    <name>dfs.datanode.address</name>
+    <value>0.0.0.0:50010</value>
+</property>
+
+<property>
+    <name>dfs.datanode.http.address</name>
+    <value>0.0.0.0:50075</value>
+</property>
+
+<property>
+    <name>dfs.datanode.ipc.address</name>
+    <value>0.0.0.0:50020</value>
+</property>
+
+<property> 
+    <name>dfs.replication</name> 
+    <value>3</value> 
+</property> 
+
+<property> 
+    <name>dfs.permissions</name> 
+    <value>true</value> 
+</property>  
+
+<property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.blocksize</name>
+    <value>134217728</value>
+</property>
+
+<property>  
+    <name>dfs.datanode.balance.bandwidthPerSec</name>  
+    <value>41943040</value> 
+</property>
+
+<property>
+    <name>dfs.datanode.max.transfer.threads</name>
+    <value>8192</value>
+</property>
+
+<property>
+    <name>dfs.namenode.handler.count</name>
+    <value>200</value>
+</property>
+
+<property>
+    <name>dfs.datanode.handler.count</name>
+    <value>100</value>
+</property>
+
+<property>
+    <name>dfs.datanode.max.xcievers</name>
+    <value>65535</value>
+</property>
+
+<property>
+    <name>dfs.namenode.name.dir.restore</name> 
+    <value>false</value> 
+</property>
+
+<property>
+    <name>dfs.namenode.checkpoint.period</name> 
+    <value>6000</value> 
+</property>
+
+<property>
+    <name>dfs.hosts</name>
+    <value>/export/common/hadoop/conf/allowed_hosts</value>
+</property>
+
+<property>
+    <name>dfs.hosts.exclude</name>
+    <value>/export/common/hadoop/conf/exclude_datanode_hosts</value>
+</property>
+
+<property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.qjournal.write-txns.timeout.ms</name>
+    <value>60000</value>
+</property>
+
+<property>
+    <name>dfs.permissions.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+     <name>dfs.namenode.acls.enabled</name>
+     <value>true</value>
+</property>
+
+<property>
+    <name>dfs.ha.fencing.methods</name>
+    <value>
+        shell(/bin/true)
+    </value>
+</property>
+
+<property>
+    <name>dfs.client.block.write.replace-datanode-on-failure.enable</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.client.block.write.replace-datanode-on-failure.policy</name>
+    <value>DEFAULT</value>
+</property> 
+<property>
+    <name>dfs.block.access.token.enable</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>dfs.namenode.keytab.file</name>
+    <value>/export/common/hadoop/conf/hdfs.keytab</value>
+</property>
+
+<property>
+    <name>dfs.namenode.kerberos.principal</name>
+    <value>hdfs/_HOST@JD.COM</value>
+</property>
+
+<property>
+    <name>dfs.namenode.kerberos.internal.spnego.principal</name>
+    <value>HTTP/_HOST@JD.COM</value>
+</property>
+
+<property>
+    <name>dfs.datanode.data.dir.perm</name>
+    <value>700</value>
+</property>
+
+
+<property>
+    <name>dfs.datanode.address</name>
+    <value>0.0.0.0:2828</value>
+</property>
+
+<property>
+    <name>dfs.datanode.http.address</name>
+    <value>0.0.0.0:2829</value>
+</property>
+
+<property>
+    <name>dfs.datanode.keytab.file</name>
+    <value>/export/common/hadoop/conf/hdfs.keytab</value>
+</property>
+
+<property>
+    <name>dfs.datanode.kerberos.principal</name>
+    <value>hdfs/_HOST@JD.COM</value>
+</property>
+
+<!--journalnode hdfs HA -->
+<property>
+    <name>dfs.journalnode.keytab.file</name>
+    <value>/export/common/hadoop/conf/hdfs.keytab</value>
+</property>
+
+<property>
+    <name>dfs.journalnode.kerberos.principal</name>
+    <value>hdfs/_HOST@JD.COM</value>
+</property>
+
+<property>
+    <name>dfs.journalnode.kerberos.internal.spnego.principal</name>
+    <value>HTTP/_HOST@JD.COM</value>
+</property>
+
+<!-- WebHdfs secure -->
+<property>
+    <name>dfs.web.authentication.kerberos.principal</name>
+    <value>HTTP/_HOST@JD.COM</value>
+</property>
+
+<property>
+    <name>dfs.web.authentication.kerberos.keytab</name>
+    <value>/export/common/hadoop/conf/hdfs.keytab</value>
+</property>
+
+<property>
+    <name>dfs.http.policy</name>
+    <value>HTTPS_ONLY</value>
+</property>
+
+<property>
+    <name>dfs.data.transfer.protection</name>
+    <value>integrity</value>
+</property>
+
+<property>
+    <name>dfs.encrypt.data.thransfer</name>
+    <value>true</value>
+</property>
+
+
+<!-- 开启HDFS权限 -->
+  <property>
+        <name>dfs.permissions.enabled</name>
+         <value>true</value>
+  </property>
+  <property>
+        <name>jdjr.hadoop.path.permission.enable</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>dfs.namenode.inode.attributes.provider.class</name>
+        <value>com.jdjr.flowyed.hadoop.permission.JdjrHdfsAuthorizer</value>
+    </property>
+    <property>
+        <name>jdjr.hadoop.path.permission.file.path</name>
+        <value>/export/common/hadoop/conf/hdfs-policies.json</value>
+    </property>
+    <property>
+        <name>jdjr.hadoop.cluster.name</name>
+        <value>gaia-agent-hadoop-open</value>
+    </property>
+<!-- 开启HDFS权限 结束 -->
+
+</configuration>
