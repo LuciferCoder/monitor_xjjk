@@ -474,13 +474,6 @@ class HDFSCHECk():
                     hostname, ip = host_ip.split("#")
                     print("deadnode 主机名：%s ip: %s is down." % (hostname, ip))
 
-
-
-
-
-
-
-
             """
             集群DN节点磁盘(Total Datanode Volume Failures）
             采集指标：VolumeFailuresTotal
