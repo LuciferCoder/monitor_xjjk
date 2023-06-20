@@ -342,6 +342,21 @@ class HDFSCHECk():
             return "false"
 
     # jmx信息处理，取得参数，计算
+    """
+    （1）HDFS使用率超过70%
+    （2）HDFS使用率超过85%
+    （3）HDFSNameNode堆内存使用率超过70%
+    （4）HDFSNameNode堆内存使用率超过90%
+    （5）DataNode is down
+    （6）NameNode is down
+    （7）HDFS日增数据量
+    （8）Namenode HA的状态
+    （9）HDFS健康检查
+    （10）集群节点数(Live Nodes)
+    （11）集群节点数(Dead Nodes )
+    （12）集群DN节点磁盘(Total Datanode Volume Failures）
+
+    """
     def nn_jmx_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
