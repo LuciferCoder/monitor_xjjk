@@ -332,7 +332,7 @@ class HDFSCHECk():
         print("调用函数 socket_check 成功")
         try:
             s = socket.socket()
-            # 设置超时5s
+            # 设置超时5s,超时返回字符false
             s.settimeout(5)
             s.connect((ip, int(port)))
             s.close()
@@ -342,8 +342,14 @@ class HDFSCHECk():
             return "false"
 
     # jmx信息处理，取得参数，计算
-    def nn_jmx_analyse(self):
-        pass
+    def nn_jmx_analyse(self, jmx_cont):
+        # jmx_content = jmx_cont
+        jmx_content = jmx_cont
+        beans = jmx_content["beans"]
+        # print(beans)
+        for dic in beans:
+            # 开始取指标
+            pass
 
 
     # 获取datanode信息
@@ -373,11 +379,16 @@ def main():
     # name, version, cluster_name, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, rm1, rm2, datanode_list, nodemanager_list = checker._json_parse()
 
     # checker.hdfs_health_check()
-    cluster_name, nn1_ip, nn2_ip = checker.hdfs_site_conf()
-    checker.namenode_jmx_info_cx(cluster_name, nn1_ip, nn2_ip)
-    """
-    
-    """
+    # cluster_name, nn1_ip, nn2_ip = checker.hdfs_site_conf()
+    # checker.namenode_jmx_info_cx(cluster_name, nn1_ip, nn2_ip)
+
+    # 本地测试
+    nn1_jmx = ""
+    with open(BASE_DIR + "/conf/hdfs/nn1jmx.json", 'r') as file:
+        nn1_jmx = json.load(file)
+        # print(nn1_jmx)
+
+    checker.nn_jmx_analyse(nn1_jmx)
 
 
 if __name__ == '__main__':
