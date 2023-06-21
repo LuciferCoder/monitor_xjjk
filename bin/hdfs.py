@@ -18,6 +18,11 @@
 （12）集群DN节点磁盘(Total Datanode Volume Failures）
 """
 
+import warnings
+
+# 屏蔽本条语句之后所有的告警
+warnings.filterwarnings("ignore")
+
 import os
 import json
 import sys
@@ -27,9 +32,6 @@ import krbticket
 from xml.etree import ElementTree as ET
 import socket
 import paramiko
-import warnings
-
-
 
 """带有Kerberos认证的hdfs认证"""
 """
@@ -68,6 +70,8 @@ sys.path.append(BASE_DIR)
 from conf import Logger as Logger
 
 warnings.filterwarnings('ignore')
+
+
 class HDFSCHECk():
 
     def __init__(self):
@@ -513,22 +517,70 @@ class HDFSCHECk():
     综合检查，首要检查服务是否宕机，namenode正常才进行其他检查
     """
 
-    def Namenode_is_down(self):
+    def ssh_connect(self, ip, port, user, password, use_pwd, ssh_keyfile, cmd):
+        # ssh获取远端服务进程信息
+        ip = ip
+        port = port
+        user = user
+        pwd = "password"
+        ssh_key = ssh_keyfile
+        use_pwd = use_pwd
+        cmd = cmd
+
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if use_pwd == "true":
+            pwd = password
+            ssh.connect(ip, port, user, password, timeout=10)
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            # 输出命令执行结果
+            result = stdout.read()
+            ssh.close()
+            bl = ""
+            if int(result) == 1:
+                bl = "true"
+            else:
+                bl="false"
+            return bl
+        else:
+            # 使用密钥连接
+            ssh.connect(hostname=ip, port=port, username=user, pkey=ssh_key)
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            # 输出命令执行结果
+            result = stdout.read()
+            ssh.close()
+            bl = ""
+            if int(result) == 1:
+                bl = "true"
+            else:
+                bl="false"
+            return bl
+
+
+    """
+    NameNoed is donw
+    指标： 服务进程 && 端口探活
+    """
+    def Namenode_is_down(self, namenode_ip, namenode_port):
         #
         # def hdfs_usage_calculate(self):
-        nn1_ip = self.nn1
-        nn1_port = self.nn1_port
+        ip = namenode_ip
+        port = namenode_port
 
-        nn2_ip = self.nn2
-        nn2_port = self.nn2_port
+        pswc_cmd = "ps -ef |grep namenode.NameNode|grep -v grep|wc -l"
+        user = "pe"
+        keyfile_path = "/home/%s/.ssh/" % user
 
-        if self.socket_check(ip=nn1_ip, port=nn1_port) == "false":
-            print("端口检查失败，%s 端口检查不通" % self.nn1)
-        if self.socket_check(ip=nn2_ip, port=nn2_port) == "false":
-            print("端口检查失败，%s 端口检查不通" % self.nn1)
-        if self.socket_check(ip=nn1_ip, port=nn1_port) == "false" and self.socket_check(ip=nn2_ip,
-                                                                                        port=nn2_port) == "false":
-            pass
+        nn1_ssh_result = self.ssh_connect(ip=ip,port=22,password="",use_pwd="false", ssh_keyfile=keyfile_path, user=user, pswc_cmd)
+        socket_ck_re = self.socket_check(ip=nn1_ip, port=nn1_port)
+        if nn1_ssh_result == "true" and socket_ck_re == "true":
+            return "alive"
+        else:
+            return "down"
+
+
+        # if self.socket_check(ip=nn2_ip, port=nn2_port) == "false":
+        #     print("端口检查失败，%s 端口检查不通" % self.nn1)
 
 
 def main():
