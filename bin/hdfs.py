@@ -633,6 +633,10 @@ class HDFSCHECk():
         file_lastname = "_crontab_hdfs_capcity.json"
         lastdayofnowstring = self.lastdayofnowstring
 
+        # 打印时间戳信息
+        print("当前日期时间戳: " + self.datenowstring)
+        print("前一天日期时间戳: " + self.lastdayofnowstring)
+
         # 本地测试
         # lastdayofnowstring = "20230622185554"
 
