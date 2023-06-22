@@ -32,6 +32,7 @@ import krbticket
 from xml.etree import ElementTree as ET
 import socket
 import paramiko
+from datetime import datetime, timedelta
 
 """带有Kerberos认证的hdfs认证"""
 """
@@ -101,11 +102,27 @@ class HDFSCHECk():
         # namenode jmx信息
         self.nn1_jmx = ""
         self.nn2_jmx = ""
+        # 判断脚本执行参数,默认值 false 按照手动执行打印宕机的datanode主机;
+        # 值为true的按照定时任务执行，不打印宕机的节点，只抓取指标写入表中;
+        # 其它值无效
+        self.use_crontab = "false"
+        # self.use_crontab = "true"
+        # 当前时间： 年月日时分
+        self.datenow = datetime.now()
+        self.datenowstring = self.datenow.strftime("%Y%m%d%H%M%S")
+        # print("cur day: %s: " % self.datenowstring )
+        # 前一天的当前时间
+        self.lastdayofnow = self.datenow - timedelta(days=1)
+        self.lastdayofnowstring = self.lastdayofnow.strftime("%Y%m%d%H%M%S")
+        # print("last_day: %s" % self.lastdayofnowstring)
+
+        self.curday_cap = ""
 
     # 解析配置文件，获取hadoop节点信息(已完成，内部返回类中的变量使用)
     def _json_parse(self):
         with open(self.jsonfile_path, 'r') as jsonfile:
             load_dict = json.load(jsonfile)
+            # print("load_dict" +  str(load_dict))
             name = load_dict["name"]
             version = load_dict["version"]
             dependencies = load_dict["dependencies"]
@@ -478,7 +495,10 @@ class HDFSCHECk():
 
                 for host_ip in deadnnode_list:
                     hostname, ip = host_ip.split("#")
-                    print("deadnode 主机名：%s ip: %s is down." % (hostname, ip))
+                    # use_crontab == false,打印到console，定时任务只抓取DeadNodes指标,
+                    # 可以使用手动执行的巡检方式打印出DeadNodes主机以及IP
+                    if self.use_crontab == "false":
+                        print("deadnode 主机名：%s ip: %s is down." % (hostname, ip))
 
             """
             集群DN节点磁盘(Total Datanode Volume Failures）
@@ -501,14 +521,16 @@ class HDFSCHECk():
                 State = dic["State"]
                 print("主机： %s namenode的HA状态为： %s " % (host, State))
 
-    # 获取datanode信息
-    """
-    进行一步节点数量与配置检查的节点数量检查,通过jmx获取datanode的节点数量来进行判断
-    first step
-    """
-
-    def hdfs_usage_calculate(self):
-        pass
+            """
+            CapacityUsed
+            采集指标：CapacityUsed
+            Hadoop:service=NameNode,name=FSNamesystem
+            """
+            if dic["name"] == "Hadoop:service=NameNode,name=FSNamesystem":
+                # 判断当前节点ha状态
+                CapacityUsed = dic["CapacityUsed"]
+                CapacityUsedGB = int(CapacityUsed) / 1024 / 1024 / 1024
+                self.curday_cap = CapacityUsedGB
 
     """
     指标抓取单项检查：
@@ -540,7 +562,7 @@ class HDFSCHECk():
             if int(result) == 1:
                 bl = "true"
             else:
-                bl="false"
+                bl = "false"
             return bl
         else:
             # 使用密钥连接
@@ -553,14 +575,14 @@ class HDFSCHECk():
             if int(result) == 1:
                 bl = "true"
             else:
-                bl="false"
+                bl = "false"
             return bl
-
 
     """
     NameNoed is donw
     指标： 服务进程 && 端口探活
     """
+
     def Namenode_is_down(self, namenode_ip, namenode_port):
         #
         # def hdfs_usage_calculate(self):
@@ -571,16 +593,125 @@ class HDFSCHECk():
         user = "pe"
         keyfile_path = "/home/%s/.ssh/" % user
 
-        nn1_ssh_result = self.ssh_connect(ip=ip,port=22,password="",use_pwd="false", ssh_keyfile=keyfile_path, user=user, pswc_cmd)
-        socket_ck_re = self.socket_check(ip=nn1_ip, port=nn1_port)
+        nn1_ssh_result = self.ssh_connect(ip=ip, port=22, password="", use_pwd="false", ssh_keyfile=keyfile_path,
+                                          user=user, cmd=pswc_cmd)
+        socket_ck_re = self.socket_check(ip=ip, port=port)
+        # 此处逻辑：
+        # 服务存在且端口正验证正常视为Namenode正常
+        # 理论上要先检查Namenode状态之后进行下一步
         if nn1_ssh_result == "true" and socket_ck_re == "true":
             return "alive"
         else:
             return "down"
 
-
         # if self.socket_check(ip=nn2_ip, port=nn2_port) == "false":
         #     print("端口检查失败，%s 端口检查不通" % self.nn1)
+
+    # 分析参数确定是否手动执行
+    def arg_analyse(self):
+        args = sys.argv
+        if len(args) == 2:
+            arg_key = args[1].split("=")[0]
+            arg_value = args[1].split("=")[1]
+            if arg_key == "use_crontab" and arg_value == "true":
+                self.use_crontab = arg_value
+            else:
+                self.use_crontab = "false"
+        else:
+            self.use_crontab = "false"
+
+    # 判断是手动执行还是定时任务执行,增加巡检脚本执行方式
+    # true 为定时任务执行
+    # false 为手动执行
+    # 手动执行取定时任务获取的hdfs增长量(打印截止时间： 示例：日期时分秒_crontab_hdfs_capcity.json)
+    # 文件检查前一天的时分是否存在,定时任务运行时,获取前一天的文件记录的变量值
+    def diff_of_hdfsAdded(self):
+        print("diff_of_hdfsAdded")
+        # 前一天文件路径
+        # 定时任务执行
+        use_crontab = self.use_crontab
+        file_lastname = "_crontab_hdfs_capcity.json"
+        lastdayofnowstring = self.lastdayofnowstring
+
+        # 本地测试
+        # lastdayofnowstring = "20230622185554"
+
+        hdfs_cron_dir = "/cron/hdfs/%s%s" % (lastdayofnowstring, file_lastname)
+        abs_path_of_file = BASE_DIR + hdfs_cron_dir
+        print(abs_path_of_file)
+
+        # print(abs_path_of_file)
+        # 前一天文件路径检查
+        file_exsited = os.path.exists(abs_path_of_file)
+        print(file_exsited)
+
+        # 定时任务执行时
+        # 本地测试
+        # use_crontab = "true"
+        if use_crontab == "true":
+            # 判断前一天文件在不在
+            # 如果文件存在，读取前一天文件值，进行计算
+            # 文件格式：
+            # {growuped: "0",hdfscap: "0"}
+            # file_exsited = "True"
+            if file_exsited.__str__() == "True":
+                # 前一天数据
+                lastday_cap = ""
+                hdfs_cap_added = ""
+                # 当日获取的数据
+                # 在获取指标的部分获取到具体的值
+                curday_cap = self.curday_cap
+                curday_cap_str = "{:.2%}".format(curday_cap / 100).replace("%", "GB")
+                print(curday_cap_str)
+
+                with open(abs_path_of_file, 'r', encoding="utf-8") as file:
+                    lastday_cap_json = json.load(file)
+                    # lastday_cap_json = str(lastday_cap_json)
+                    print(type(lastday_cap_json))
+                    # 1408.71GB
+                    lastday_cap = lastday_cap_json["hdfscap"]
+
+                    print("lastday_cap_jsonf-->" + lastday_cap)
+                    file.close()
+
+                # 计算(fload类型)
+                print("curday_cap_str--> "+curday_cap_str)
+                print("lastday_cap--> "+lastday_cap)
+                hdfs_cap_added = float(curday_cap_str.replace("GB", "")) - float(lastday_cap.replace("GB", ""))
+                # 将当天算得的数据写入记录文件
+                # file_lastname = "_crontab_hdfs_capcity.json"
+                curdayofnowstring = self.datenowstring
+                hdfs_cron_dir_cur = "/cron/hdfs/%s%s" % (curdayofnowstring, file_lastname)
+                abs_path_of_file_cur = BASE_DIR + hdfs_cron_dir_cur
+                with open(abs_path_of_file_cur, 'w') as f:
+                    dic = '{"growuped": "%s", "hdfscap": "%s"}' % (str(hdfs_cap_added) + "GB", curday_cap_str)
+                    # json.dump(dic, f)
+                    f.write(dic)
+                    f.close()
+
+            else:
+                # 如果不存在，写入当前获取的数据到当前日期的文件中，跳过计算，设置/返回增长量为当前获取的hdfs ca指标数值
+                print(file_exsited.__str__())
+                # file_lastname = "_crontab_hdfs_capcity.json"
+                # 文件不存在，直接写入当天数据到本地，设置grouadd的值与hdfs cap 值相等
+                curdayofnowstring = self.datenowstring
+                hdfs_cron_dir_cur = "/cron/hdfs/%s%s" % (curdayofnowstring, file_lastname)
+                abs_path_of_file_cur = BASE_DIR + hdfs_cron_dir_cur
+
+                curday_cap = self.curday_cap
+                curday_cap_str = "{:.2%}".format(curday_cap / 100).replace("%", "GB")
+                print("前一天文件不存在-->" + curday_cap_str)
+                hdfs_cap_added = curday_cap_str
+
+                with open(abs_path_of_file_cur, 'w', encoding="utf-8") as f:
+                    dic = '{"growuped": "%s", "hdfscap": "%s"}' % (hdfs_cap_added, curday_cap_str)
+                    # json.dump(dic, f)
+                    f.write(dic)
+                    f.close()
+
+        else:
+            # 手动执行时 hdfs added 只打印增长量
+            pass
 
 
 def main():
@@ -594,11 +725,12 @@ def main():
 
     # 本地测试
     nn1_jmx = ""
-    with open(BASE_DIR + "/conf/hdfs/谢明轩_2023-06-19-16-52-12.txt", 'r') as file:
+    with open(BASE_DIR + "/conf/hdfs/45jmx_with_deaddatanodes.json", 'r') as file:
         nn1_jmx = json.load(file)
         # print(nn1_jmx)
 
     checker.nn_jmx_analyse(nn1_jmx)
+    checker.diff_of_hdfsAdded()
 
 
 if __name__ == '__main__':

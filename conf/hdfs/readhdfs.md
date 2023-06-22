@@ -29,3 +29,16 @@ hdfs 巡检需求
 （2）HDFS使用率超过85%
 （7）HDFS日增数据量
 ```
+
+```shell script
+拟定使用脚本方式：
+#定时任务执行方式：
+python3 hdfs.py use_crontab="true"
+python3 hdfs.py use_crontab=true
+
+
+#手动执行方式：
+python3 hdfs.py use_crontab="false"
+python3 hdfs.py use_crontab=false
+python3 hdfs.py
+```
