@@ -710,6 +710,7 @@ class HDFSCHECk():
                     f.close()
 
         else:
+            # 判定为手动执行
             # 手动执行时 hdfs added 只打印增长量
             pass
 

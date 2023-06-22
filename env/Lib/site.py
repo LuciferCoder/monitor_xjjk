@@ -538,6 +538,11 @@ def main():
     execsitecustomize()
     if ENABLE_USER_SITE:
         execusercustomize()
+    if sys.platform == 'win32':
+        # Anaconda Distribution hack in-case the environment has not been activated properly.
+        library_bin = r"%s\Library\bin" % (sys.prefix)
+        if library_bin not in os.environ["PATH"]:
+            os.environ["PATH"] = library_bin+";"+os.environ["PATH"]
 
 # Prevent extending of sys.path when python was started with -S and
 # site is imported later.

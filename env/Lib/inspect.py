@@ -1070,10 +1070,8 @@ def getargspec(func):
     Alternatively, use getfullargspec() for an API with a similar namedtuple
     based interface, but full support for annotations and keyword-only
     parameters.
-
-    Deprecated since Python 3.5, use `inspect.getfullargspec()`.
     """
-    warnings.warn("inspect.getargspec() is deprecated since Python 3.0, "
+    warnings.warn("inspect.getargspec() is deprecated, "
                   "use inspect.signature() or inspect.getfullargspec()",
                   DeprecationWarning, stacklevel=2)
     args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = \
@@ -2786,25 +2784,19 @@ class Signature:
 
     @classmethod
     def from_function(cls, func):
-        """Constructs Signature for the given python function.
+        """Constructs Signature for the given python function."""
 
-        Deprecated since Python 3.5, use `Signature.from_callable()`.
-        """
-
-        warnings.warn("inspect.Signature.from_function() is deprecated since "
-                      "Python 3.5, use Signature.from_callable()",
+        warnings.warn("inspect.Signature.from_function() is deprecated, "
+                      "use Signature.from_callable()",
                       DeprecationWarning, stacklevel=2)
         return _signature_from_function(cls, func)
 
     @classmethod
     def from_builtin(cls, func):
-        """Constructs Signature for the given builtin function.
+        """Constructs Signature for the given builtin function."""
 
-        Deprecated since Python 3.5, use `Signature.from_callable()`.
-        """
-
-        warnings.warn("inspect.Signature.from_builtin() is deprecated since "
-                      "Python 3.5, use Signature.from_callable()",
+        warnings.warn("inspect.Signature.from_builtin() is deprecated, "
+                      "use Signature.from_callable()",
                       DeprecationWarning, stacklevel=2)
         return _signature_from_builtin(cls, func)
 

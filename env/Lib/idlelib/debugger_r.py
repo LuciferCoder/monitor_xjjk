@@ -157,7 +157,7 @@ class IdbAdapter:
     #----------called by a DictProxy----------
 
     def dict_keys(self, did):
-        raise NotImplementedError("dict_keys not public or pickleable")
+        raise NotImplemented("dict_keys not public or pickleable")
 ##         dict = dicttable[did]
 ##         return dict.keys()
 

@@ -4,6 +4,7 @@
 Much of IdleConf is also exercised by ConfigDialog and test_configdialog.
 """
 from idlelib import config
+import copy
 import sys
 import os
 import tempfile

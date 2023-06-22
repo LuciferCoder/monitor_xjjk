@@ -11,6 +11,7 @@ import os.path
 from idlelib import _pyclbr as pyclbr
 from tkinter import Tk
 
+from idlelib import filelist
 from idlelib.tree import TreeNode
 
 

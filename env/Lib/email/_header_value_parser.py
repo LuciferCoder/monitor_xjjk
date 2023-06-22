@@ -1561,8 +1561,6 @@ def get_domain(value):
         token, value = get_dot_atom(value)
     except errors.HeaderParseError:
         token, value = get_atom(value)
-    if value and value[0] == '@':
-        raise errors.HeaderParseError('Invalid Domain')
     if leader is not None:
         token[:0] = [leader]
     domain.append(token)
@@ -2212,8 +2210,8 @@ def get_section(value):
         digits += value[0]
         value = value[1:]
     if digits[0] == '0' and digits != '0':
-        section.defects.append(errors.InvalidHeaderError(
-                "section number has an invalid leading 0"))
+        section.defects.append(errors.InvalidHeaderError("section number"
+            "has an invalid leading 0"))
     section.number = int(digits)
     section.append(ValueTerminal(digits, 'digits'))
     return section, value
@@ -2368,9 +2366,6 @@ def get_parameter(value):
         while value:
             if value[0] in WSP:
                 token, value = get_fws(value)
-            elif value[0] == '"':
-                token = ValueTerminal('"', 'DQUOTE')
-                value = value[1:]
             else:
                 token, value = get_qcontent(value)
             v.append(token)
@@ -2720,36 +2715,26 @@ def _fold_as_ew(to_encode, lines, maxlen, last_ew, ew_combine_allowed, charset):
         trailing_wsp = to_encode[-1]
         to_encode = to_encode[:-1]
     new_last_ew = len(lines[-1]) if last_ew is None else last_ew
-
-    encode_as = 'utf-8' if charset == 'us-ascii' else charset
-
-    # The RFC2047 chrome takes up 7 characters plus the length
-    # of the charset name.
-    chrome_len = len(encode_as) + 7
-
-    if (chrome_len + 1) >= maxlen:
-        raise errors.HeaderParseError(
-            "max_line_length is too small to fit an encoded word")
-
     while to_encode:
         remaining_space = maxlen - len(lines[-1])
-        text_space = remaining_space - chrome_len
+        # The RFC2047 chrome takes up 7 characters plus the length
+        # of the charset name.
+        encode_as = 'utf-8' if charset == 'us-ascii' else charset
+        text_space = remaining_space - len(encode_as) - 7
         if text_space <= 0:
             lines.append(' ')
+            # XXX We'll get an infinite loop here if maxlen is <= 7
             continue
-
-        to_encode_word = to_encode[:text_space]
-        encoded_word = _ew.encode(to_encode_word, charset=encode_as)
-        excess = len(encoded_word) - remaining_space
-        while excess > 0:
-            # Since the chunk to encode is guaranteed to fit into less than 100 characters,
-            # shrinking it by one at a time shouldn't take long.
-            to_encode_word = to_encode_word[:-1]
-            encoded_word = _ew.encode(to_encode_word, charset=encode_as)
-            excess = len(encoded_word) - remaining_space
-        lines[-1] += encoded_word
-        to_encode = to_encode[len(to_encode_word):]
-
+        first_part = to_encode[:text_space]
+        ew = _ew.encode(first_part, charset=encode_as)
+        excess = len(ew) - remaining_space
+        if excess > 0:
+            # encode always chooses the shortest encoding, so this
+            # is guaranteed to fit at this point.
+            first_part = first_part[:-excess]
+            ew = _ew.encode(first_part)
+        lines[-1] += ew
+        to_encode = to_encode[len(first_part):]
         if to_encode:
             lines.append(' ')
             new_last_ew = len(lines[-1])

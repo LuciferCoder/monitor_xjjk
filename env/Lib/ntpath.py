@@ -545,8 +545,8 @@ else:  # use native Windows method on Windows
     def abspath(path):
         """Return the absolute version of a path."""
         try:
-            return normpath(_getfullpathname(path))
-        except (OSError, ValueError):
+            return _getfullpathname(path)
+        except OSError:
             return _abspath_fallback(path)
 
 # realpath is a no-op on systems without islink support

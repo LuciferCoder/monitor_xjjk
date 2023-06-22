@@ -59,10 +59,6 @@ _HAS_IPv6 = hasattr(socket, 'AF_INET6')
 # Maximum timeout passed to select to avoid OS limitations
 MAXIMUM_SELECT_TIMEOUT = 24 * 3600
 
-# Used for deprecation and removal of `loop.create_datagram_endpoint()`'s
-# *reuse_address* parameter
-_unset = object()
-
 
 def _format_handle(handle):
     cb = handle._callback
@@ -184,17 +180,6 @@ def _ensure_resolved(address, *, family=0, type=socket.SOCK_STREAM, proto=0,
     else:
         return loop.getaddrinfo(host, port, family=family, type=type,
                                 proto=proto, flags=flags)
-
-
-if hasattr(socket, 'TCP_NODELAY'):
-    def _set_nodelay(sock):
-        if (sock.family in {socket.AF_INET, socket.AF_INET6} and
-                _is_stream_socket(sock.type) and
-                sock.proto == socket.IPPROTO_TCP):
-            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-else:
-    def _set_nodelay(sock):
-        pass
 
 
 def _run_until_complete_cb(fut):
@@ -858,7 +843,7 @@ class BaseEventLoop(events.AbstractEventLoop):
     def create_datagram_endpoint(self, protocol_factory,
                                  local_addr=None, remote_addr=None, *,
                                  family=0, proto=0, flags=0,
-                                 reuse_address=_unset, reuse_port=None,
+                                 reuse_address=None, reuse_port=None,
                                  allow_broadcast=None, sock=None):
         """Create datagram connection."""
         if sock is not None:
@@ -867,7 +852,7 @@ class BaseEventLoop(events.AbstractEventLoop):
                     'A UDP Socket was expected, got {!r}'.format(sock))
             if (local_addr or remote_addr or
                     family or proto or flags or
-                    reuse_port or allow_broadcast):
+                    reuse_address or reuse_port or allow_broadcast):
                 # show the problematic kwargs in exception msg
                 opts = dict(local_addr=local_addr, remote_addr=remote_addr,
                             family=family, proto=proto, flags=flags,
@@ -916,18 +901,8 @@ class BaseEventLoop(events.AbstractEventLoop):
 
             exceptions = []
 
-            # bpo-37228
-            if reuse_address is not _unset:
-                if reuse_address:
-                    raise ValueError("Passing `reuse_address=True` is no "
-                                     "longer supported, as the usage of "
-                                     "SO_REUSEPORT in UDP poses a significant "
-                                     "security concern.")
-                else:
-                    warnings.warn("The *reuse_address* parameter has been "
-                                  "deprecated as of 3.6.10 and is scheduled "
-                                  "for removal in 3.11.", DeprecationWarning,
-                                  stacklevel=2)
+            if reuse_address is None:
+                reuse_address = os.name == 'posix' and sys.platform != 'cygwin'
 
             for ((family, proto),
                  (local_address, remote_address)) in addr_pairs_info:
@@ -936,6 +911,9 @@ class BaseEventLoop(events.AbstractEventLoop):
                 try:
                     sock = socket.socket(
                         family=family, type=socket.SOCK_DGRAM, proto=proto)
+                    if reuse_address:
+                        sock.setsockopt(
+                            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     if reuse_port:
                         _set_reuseport(sock)
                     if allow_broadcast:

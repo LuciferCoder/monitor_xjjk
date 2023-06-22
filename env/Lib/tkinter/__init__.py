@@ -3750,7 +3750,7 @@ class Spinbox(Widget, XView):
         select to commands. If the selection isn't currently in
         the spinbox, then a new selection is created to include
         the characters between index and the most recent selection
-        anchor point, inclusive.
+        anchor point, inclusive. Returns an empty string.
         """
         return self.selection("adjust", index)
 
@@ -3758,7 +3758,7 @@ class Spinbox(Widget, XView):
         """Clear the selection
 
         If the selection isn't in this widget then the
-        command has no effect.
+        command has no effect. Returns an empty string.
         """
         return self.selection("clear")
 
@@ -3766,9 +3766,9 @@ class Spinbox(Widget, XView):
         """Sets or gets the currently selected element.
 
         If a spinbutton element is specified, it will be
-        displayed depressed.
+        displayed depressed
         """
-        return self.tk.call(self._w, 'selection', 'element', element)
+        return self.selection("element", element)
 
 ###########################################################################
 

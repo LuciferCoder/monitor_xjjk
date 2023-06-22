@@ -216,14 +216,10 @@ LOOSE_HTTP_DATE_RE = re.compile(
        (?::(\d\d))?    # optional seconds
     )?                 # optional clock
        \s*
-    (?:
-       ([-+]?\d{2,4}|(?![APap][Mm]\b)[A-Za-z]+) # timezone
+    ([-+]?\d{2,4}|(?![APap][Mm]\b)[A-Za-z]+)? # timezone
        \s*
-    )?
-    (?:
-       \(\w+\)         # ASCII representation of timezone in parens.
-       \s*
-    )?$""", re.X | re.ASCII)
+    (?:\(\w+\))?       # ASCII representation of timezone in parens.
+       \s*$""", re.X | re.ASCII)
 def http2time(text):
     """Returns time in seconds since epoch of time represented by a string.
 
@@ -293,11 +289,9 @@ ISO_DATE_RE = re.compile(
       (?::?(\d\d(?:\.\d*)?))?  # optional seconds (and fractional)
    )?                    # optional clock
       \s*
-   (?:
-      ([-+]?\d\d?:?(:?\d\d)?
-       |Z|z)             # timezone  (Z is "zero meridian", i.e. GMT)
-      \s*
-   )?$""", re.X | re. ASCII)
+   ([-+]?\d\d?:?(:?\d\d)?
+    |Z|z)?               # timezone  (Z is "zero meridian", i.e. GMT)
+      \s*$""", re.X | re. ASCII)
 def iso2time(text):
     """
     As for http2time, but parses the ISO 8601 formats:
@@ -999,7 +993,7 @@ class DefaultCookiePolicy(CookiePolicy):
             req_path = request_path(request)
             if ((cookie.version > 0 or
                  (cookie.version == 0 and self.strict_ns_set_path)) and
-                not self.path_return_ok(cookie.path, request)):
+                not req_path.startswith(cookie.path)):
                 _debug("   path attribute %s is not a prefix of request "
                        "path %s", cookie.path, req_path)
                 return False
@@ -1154,11 +1148,6 @@ class DefaultCookiePolicy(CookiePolicy):
         req_host, erhn = eff_request_host(request)
         domain = cookie.domain
 
-        if domain and not domain.startswith("."):
-            dotdomain = "." + domain
-        else:
-            dotdomain = domain
-
         # strict check of non-domain cookies: Mozilla does this, MSIE5 doesn't
         if (cookie.version == 0 and
             (self.strict_ns_domain & self.DomainStrictNonDomain) and
@@ -1171,7 +1160,7 @@ class DefaultCookiePolicy(CookiePolicy):
             _debug("   effective request-host name %s does not domain-match "
                    "RFC 2965 cookie domain %s", erhn, domain)
             return False
-        if cookie.version == 0 and not ("."+erhn).endswith(dotdomain):
+        if cookie.version == 0 and not ("."+erhn).endswith(domain):
             _debug("   request-host %s does not match Netscape cookie domain "
                    "%s", req_host, domain)
             return False
@@ -1185,11 +1174,7 @@ class DefaultCookiePolicy(CookiePolicy):
             req_host = "."+req_host
         if not erhn.startswith("."):
             erhn = "."+erhn
-        if domain and not domain.startswith("."):
-            dotdomain = "." + domain
-        else:
-            dotdomain = domain
-        if not (req_host.endswith(dotdomain) or erhn.endswith(dotdomain)):
+        if not (req_host.endswith(domain) or erhn.endswith(domain)):
             #_debug("   request domain %s does not match cookie domain %s",
             #       req_host, domain)
             return False
@@ -1206,15 +1191,11 @@ class DefaultCookiePolicy(CookiePolicy):
     def path_return_ok(self, path, request):
         _debug("- checking cookie path=%s", path)
         req_path = request_path(request)
-        pathlen = len(path)
-        if req_path == path:
-            return True
-        elif (req_path.startswith(path) and
-              (path.endswith("/") or req_path[pathlen:pathlen+1] == "/")):
-            return True
+        if not req_path.startswith(path):
+            _debug("  %s does not path-match %s", req_path, path)
+            return False
+        return True
 
-        _debug("  %s does not path-match %s", req_path, path)
-        return False
 
 def vals_sorted_by_key(adict):
     keys = sorted(adict.keys())

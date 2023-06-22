@@ -109,7 +109,7 @@ class OutputWindow(EditorWindow):
         Return:
             Length of text inserted.
         """
-        if isinstance(s, bytes):
+        if isinstance(s, (bytes, bytes)):
             s = s.decode(iomenu.encoding, "replace")
         self.text.insert(mark, s, tags)
         self.text.see(mark)

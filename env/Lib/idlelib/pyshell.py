@@ -12,11 +12,11 @@ except ImportError:
 # Valid arguments for the ...Awareness call below are defined in the following.
 # https://msdn.microsoft.com/en-us/library/windows/desktop/dn280512(v=vs.85).aspx
 if sys.platform == 'win32':
+    import ctypes
+    PROCESS_SYSTEM_DPI_AWARE = 1
     try:
-        import ctypes
-        PROCESS_SYSTEM_DPI_AWARE = 1
         ctypes.OleDLL('shcore').SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE)
-    except (ImportError, AttributeError, OSError):
+    except (AttributeError, OSError):
         pass
 
 import tkinter.messagebox as tkMessageBox
@@ -38,7 +38,6 @@ from platform import python_version
 import re
 import socket
 import subprocess
-from textwrap import TextWrapper
 import threading
 import time
 import tokenize
@@ -1274,14 +1273,6 @@ class PyShell(OutputWindow):
         self.set_line_and_column()
         self.io.reset_undo()
 
-    def show_warning(self, msg):
-        width = self.interp.tkconsole.width
-        wrapper = TextWrapper(width=width, tabsize=8, expand_tabs=True)
-        wrapped_msg = '\n'.join(wrapper.wrap(msg))
-        if not wrapped_msg.endswith('\n'):
-            wrapped_msg += '\n'
-        self.per.bottom.insert("iomark linestart", wrapped_msg, "stderr")
-
     def resetoutput(self):
         source = self.text.get("iomark", "end-1c")
         if self.history:
@@ -1550,20 +1541,12 @@ def main():
             shell.interp.execfile(script)
     elif shell:
         # If there is a shell window and no cmd or script in progress,
-        # check for problematic issues and print warning message(s) in
-        # the IDLE shell window; this is less intrusive than always
-        # opening a separate window.
-
-        # Warn if using a problematic OS X Tk version.
+        # check for problematic OS X Tk versions and print a warning
+        # message in the IDLE shell window; this is less intrusive
+        # than always opening a separate window.
         tkversionwarning = macosx.tkVersionWarning(root)
         if tkversionwarning:
-            shell.show_warning(tkversionwarning)
-
-        # Warn if the "Prefer tabs when opening documents" system
-        # preference is set to "Always".
-        prefer_tabs_preference_warning = macosx.preferTabsPreferenceWarning()
-        if prefer_tabs_preference_warning:
-            shell.show_warning(prefer_tabs_preference_warning)
+            shell.interp.runcommand("print('%s')" % tkversionwarning)
 
     while flist.inversedict:  # keep IDLE running while files are open.
         root.mainloop()

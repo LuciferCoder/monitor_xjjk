@@ -450,7 +450,6 @@ def _default_mime_types():
         '.mht'    : 'message/rfc822',
         '.mhtml'  : 'message/rfc822',
         '.mif'    : 'application/x-mif',
-        '.mjs'    : 'application/javascript',
         '.mov'    : 'video/quicktime',
         '.movie'  : 'video/x-sgi-movie',
         '.mp2'    : 'audio/mpeg',

@@ -18,10 +18,10 @@ TCL_MINOR_VERSION='6'
 TCL_PATCH_LEVEL='8.6.6'
 
 # C compiler to use for compilation.
-TCL_CC='cl.exe'
+TCL_CC='cl'
 
 # -D flags for use with the C compiler.
-TCL_DEFS='-nologo -c -W3 -DUNICODE -D_UNICODE -W3 -D _CRT_SECURE_NO_DEPRECATE -D _CRT_NONSTDC_NO_DEPRECATE -Fp.\Release_AMD64_VC13\tcl_ThreadedDynamic\ -O2  -Ot -Oi -fp:strict -Gs -GS -GL -MD -I"C:\ci\python_1615909964186\work\externals\tcl-core-8.6.6.0\win\..\win" -I"C:\ci\python_1615909964186\work\externals\tcl-core-8.6.6.0\win\..\generic" -I"C:\ci\python_1615909964186\work\externals\tcl-core-8.6.6.0\win\..\libtommath" -DTCL_TOMMATH -DMP_PREC=4 -Dinline=__inline -DHAVE_ZLIB=1 -DTCL_CFGVAL_ENCODING=\"cp1252\" -DSTDC_HEADERS -DTCL_THREADS=1 -DUSE_THREAD_ALLOC=1 -DNDEBUG -DTCL_CFG_OPTIMIZED -DTCL_CFG_DO64BIT'
+TCL_DEFS='-nologo -c -W3 -DUNICODE -D_UNICODE -W3 -D _CRT_SECURE_NO_DEPRECATE -D _CRT_NONSTDC_NO_DEPRECATE -Fp.\Release_AMD64_VC13\tcl_ThreadedDynamic\ -O2  -Ot -Oi -fp:strict -Gs -GS -GL -MD -I"C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcl-core-8.6.6.0\win\..\win" -I"C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcl-core-8.6.6.0\win\..\generic" -I"C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcl-core-8.6.6.0\win\..\libtommath" -DTCL_TOMMATH -DMP_PREC=4 -Dinline=__inline -DHAVE_ZLIB=1 -DTCL_CFGVAL_ENCODING=\"cp1252\" -DSTDC_HEADERS -DTCL_THREADS=1 -DUSE_THREAD_ALLOC=1 -DNDEBUG -DTCL_CFG_OPTIMIZED -DTCL_CFG_DO64BIT'
 
 # If TCL was built with debugging symbols, generated libraries contain
 # this string at the end of the library name (before the extension).
@@ -55,11 +55,11 @@ TCL_LIBS='netapi32.lib kernel32.lib user32.lib advapi32.lib userenv.lib ws2_32.l
 
 # Top-level directory in which Tcl's platform-independent files are
 # installed.
-TCL_PREFIX='C:\ci\python_1615909964186\work\externals\tcltk64'
+TCL_PREFIX='C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcltk64'
 
 # Top-level directory in which Tcl's platform-specific files (e.g.
 # executables) are installed.
-TCL_EXEC_PREFIX='C:\ci\python_1615909964186\work\externals\tcltk64\bin'
+TCL_EXEC_PREFIX='C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcltk64\bin'
 
 # Flags to pass to cc when compiling the components of a shared library:
 TCL_SHLIB_CFLAGS=''
@@ -114,11 +114,11 @@ TCL_BUILD_LIB_SPEC=''
 
 # String to pass to linker to pick up the Tcl library from its
 # installed directory.
-TCL_LIB_SPEC='C:\ci\python_1615909964186\work\externals\tcltk64\lib\tcl86t.lib'
+TCL_LIB_SPEC='C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcltk64\lib\tcl86t.lib'
 
 # String to pass to the compiler so that an extension can
 # find installed Tcl headers.
-TCL_INCLUDE_SPEC='-IC:\ci\python_1615909964186\work\externals\tcltk64\include'
+TCL_INCLUDE_SPEC='-IC:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcltk64\include'
 
 # Indicates whether a version numbers should be used in -l switches
 # ("ok" means it's safe to use switches like -ltcl7.5;  "nodots" means
@@ -145,7 +145,7 @@ TCL_UNSHARED_LIB_SUFFIX='86t.lib'
 # different place than the directory containing the source files, this
 # points to the location of the sources, not the location where Tcl was
 # compiled.
-TCL_SRC_DIR='C:\ci\python_1615909964186\work\externals\tcl-core-8.6.6.0\win\..'
+TCL_SRC_DIR='C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcl-core-8.6.6.0\win\..'
 
 # List of standard directories in which to look for packages during
 # "package require" commands.  Contains the "prefix" directory plus also
@@ -167,13 +167,13 @@ TCL_BUILD_STUB_LIB_SPEC='-L.\Release_AMD64_VC13 tclstub86.lib'
 
 # String to pass to linker to pick up the Tcl stub library from its
 # installed directory.
-TCL_STUB_LIB_SPEC='-LC:\ci\python_1615909964186\work\externals\tcltk64\lib tclstub86.lib'
+TCL_STUB_LIB_SPEC='-LC:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcltk64\lib tclstub86.lib'
 
 # Path to the Tcl stub library in the build directory.
 TCL_BUILD_STUB_LIB_PATH='.\Release_AMD64_VC13\tclstub86.lib'
 
 # Path to the Tcl stub library in the install directory.
-TCL_STUB_LIB_PATH='C:\ci\python_1615909964186\work\externals\tcltk64\lib\tclstub86.lib'
+TCL_STUB_LIB_PATH='C:\Users\rdonnelly\mc3\conda-bld\python_1540771532467\work\externals\tcltk64\lib\tclstub86.lib'
 
 # Flag, 1: we built Tcl with threads enabled, 0 we didn't
 TCL_THREADS=1

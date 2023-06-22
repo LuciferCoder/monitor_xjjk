@@ -60,12 +60,10 @@ class RegressionTestResult(unittest.TextTestResult):
             e.set('time', f'{time.perf_counter() - self.__start_time:0.6f}')
 
         if capture:
-            if self._stdout_buffer is not None:
-                stdout = self._stdout_buffer.getvalue().rstrip()
-                ET.SubElement(e, 'system-out').text = stdout
-            if self._stderr_buffer is not None:
-                stderr = self._stderr_buffer.getvalue().rstrip()
-                ET.SubElement(e, 'system-err').text = stderr
+            stdout = self._stdout_buffer.getvalue().rstrip()
+            ET.SubElement(e, 'system-out').text = stdout
+            stderr = self._stderr_buffer.getvalue().rstrip()
+            ET.SubElement(e, 'system-err').text = stderr
 
         for k, v in args.items():
             if not k or not v:
@@ -154,24 +152,23 @@ class RegressionTestResult(unittest.TextTestResult):
         return e
 
 class QuietRegressionTestRunner:
-    def __init__(self, stream, buffer=False):
+    def __init__(self, stream):
         self.result = RegressionTestResult(stream, None, 0)
-        self.result.buffer = buffer
 
     def run(self, test):
         test(self.result)
         return self.result
 
-def get_test_runner_class(verbosity, buffer=False):
+def get_test_runner_class(verbosity):
     if verbosity:
         return functools.partial(unittest.TextTestRunner,
                                  resultclass=RegressionTestResult,
-                                 buffer=buffer,
+                                 buffer=True,
                                  verbosity=verbosity)
-    return functools.partial(QuietRegressionTestRunner, buffer=buffer)
+    return QuietRegressionTestRunner
 
-def get_test_runner(stream, verbosity, capture_output=False):
-    return get_test_runner_class(verbosity, capture_output)(stream)
+def get_test_runner(stream, verbosity):
+    return get_test_runner_class(verbosity)(stream)
 
 if __name__ == '__main__':
     class TestTests(unittest.TestCase):

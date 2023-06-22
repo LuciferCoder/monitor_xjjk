@@ -11,3 +11,22 @@
 +defaults::wheel-0.37.1-pyhd3eb1b0_0
 +defaults::wincertstore-0.2-py36h7fe50ca_0
 # update specs: ['python=3.6']
+==> 2023-06-22 23:54:18 <==
+# cmd: D:\Download\App_installed\Anaconda3\Scripts\conda install -p F:/git_project/monitor_xjjk/env paramiko -y
+-defaults::python-3.6.13-h3758d61_0
+-defaults::sqlite-3.41.2-h2bbff1b_0
++defaults::bcrypt-3.2.0-py36he774522_0
++defaults::ca-certificates-2023.05.30-haa95532_0
++defaults::cffi-1.14.6-py36h2bbff1b_0
++defaults::cryptography-35.0.0-py36h71e12ea_0
++defaults::openssl-1.1.1u-h2bbff1b_0
++defaults::paramiko-2.8.1-pyhd3eb1b0_0
++defaults::pycparser-2.21-pyhd3eb1b0_0
++defaults::pynacl-1.4.0-py36h62dcd97_1
++defaults::python-3.6.7-h33f27b4_1
++defaults::six-1.16.0-pyhd3eb1b0_1
++defaults::sqlite-3.20.1-vc14h7ce8c62_1
+# update specs: ['paramiko']
+==> 2023-06-22 23:56:43 <==
+# cmd: D:\Download\App_installed\Anaconda3\Scripts\conda install -p F:/git_project/monitor_xjjk/env paramiko -y
+# update specs: ['paramiko']

@@ -246,12 +246,7 @@ def expanduser(path):
     if i == 1:
         if 'HOME' not in os.environ:
             import pwd
-            try:
-                userhome = pwd.getpwuid(os.getuid()).pw_dir
-            except KeyError:
-                # bpo-10496: if the current user identifier doesn't exist in the
-                # password database, return the path unchanged
-                return path
+            userhome = pwd.getpwuid(os.getuid()).pw_dir
         else:
             userhome = os.environ['HOME']
     else:
@@ -262,8 +257,6 @@ def expanduser(path):
         try:
             pwent = pwd.getpwnam(name)
         except KeyError:
-            # bpo-10496: if the user name from the path doesn't exist in the
-            # password database, return the path unchanged
             return path
         userhome = pwent.pw_dir
     if isinstance(path, bytes):

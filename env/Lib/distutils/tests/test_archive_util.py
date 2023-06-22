@@ -122,13 +122,12 @@ class ArchiveUtilTestCase(support.TempdirManager,
         try:
             names = tar.getnames()
             names.sort()
-            return names
+            return tuple(names)
         finally:
             tar.close()
 
-    _zip_created_files = ['dist/', 'dist/file1', 'dist/file2',
-                          'dist/sub/', 'dist/sub/file3', 'dist/sub2/']
-    _created_files = [p.rstrip('/') for p in _zip_created_files]
+    _created_files = ('dist', 'dist/file1', 'dist/file2',
+                      'dist/sub', 'dist/sub/file3', 'dist/sub2')
 
     def _create_files(self):
         # creating something to tar
@@ -245,7 +244,8 @@ class ArchiveUtilTestCase(support.TempdirManager,
         tarball = base_name + '.zip'
         self.assertTrue(os.path.exists(tarball))
         with zipfile.ZipFile(tarball) as zf:
-            self.assertEqual(sorted(zf.namelist()), self._zip_created_files)
+            self.assertEqual(sorted(zf.namelist()),
+                             ['dist/file1', 'dist/file2', 'dist/sub/file3'])
 
     @unittest.skipUnless(ZIP_SUPPORT, 'Need zip support to run')
     def test_make_zipfile_no_zlib(self):
@@ -271,7 +271,8 @@ class ArchiveUtilTestCase(support.TempdirManager,
                          [((tarball, "w"), {'compression': zipfile.ZIP_STORED})])
         self.assertTrue(os.path.exists(tarball))
         with zipfile.ZipFile(tarball) as zf:
-            self.assertEqual(sorted(zf.namelist()), self._zip_created_files)
+            self.assertEqual(sorted(zf.namelist()),
+                             ['dist/file1', 'dist/file2', 'dist/sub/file3'])
 
     def test_check_archive_formats(self):
         self.assertEqual(check_archive_formats(['gztar', 'xxx', 'zip']),
