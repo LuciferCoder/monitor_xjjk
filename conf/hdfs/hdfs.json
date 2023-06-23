@@ -8,7 +8,9 @@
       "user": "hdfs",
       "num": "4",
       "second": "5",
-      "hdfsconf": "hdfs-sit.xml"
+      "hdfsconf": "hdfs-sit.xml",
+      "ssh_user": "root",
+      "ssh_pkey": "/root/.ssh/id_rsa"
     },
     "kerberos": {
       "krb5conf": "/etc/krb5.conf",

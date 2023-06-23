@@ -26,7 +26,6 @@ warnings.filterwarnings("ignore")
 import os
 import json
 import sys
-# import krbcontext
 import hdfs
 import krbticket
 from xml.etree import ElementTree as ET
@@ -79,7 +78,7 @@ class HDFSCHECk():
         self.BASE_DIR = BASE_DIR
         self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/hdfs/hdfs.json"
-        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos = self._json_parse()
+        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -110,21 +109,21 @@ class HDFSCHECk():
         # 当前时间： 年月日时分
         self.datenow = datetime.now()
         self.datenowstring = self.datenow.strftime("%Y%m%d%H%M%S")
-        # print("cur day: %s: " % self.datenowstring )
         # 前一天的当前时间
         self.lastdayofnow = self.datenow - timedelta(days=1)
         self.lastdayofnowstring = self.lastdayofnow.strftime("%Y%m%d%H%M%S")
-        # print("last_day: %s" % self.lastdayofnowstring)
         # 前一天的年月日
         self.lastdayofdate = self.lastdayofnow.strftime("%Y%m%d")
 
         self.curday_cap = ""
+        self.ssh_user = ssh_user
+        self.ssh_pkey = ssh_pkey
 
     # 解析配置文件，获取hadoop节点信息(已完成，内部返回类中的变量使用)
     def _json_parse(self):
         with open(self.jsonfile_path, 'r') as jsonfile:
             load_dict = json.load(jsonfile)
-            # print("load_dict" +  str(load_dict))
+
             name = load_dict["name"]
             version = load_dict["version"]
             dependencies = load_dict["dependencies"]
@@ -137,7 +136,7 @@ class HDFSCHECk():
 
             # 集群是否使用了kerberos
             use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
-            # print(user_kerberos)
+
 
             # Kerberos相关配置
             krb5conf = load_dict["dependencies"]["kerberos"]["krb5conf"]
@@ -151,6 +150,9 @@ class HDFSCHECk():
             nn2 = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn2"]
             nn2_port = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn2_port"]
 
+            ssh_user = load_dict["dependencies"]["config"]["ssh_user"]
+            ssh_pkey = load_dict["dependencies"]["config"]["ssh_pkey"]
+
             # ##rm
             # rm1 = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1"]
             # rm1_port = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1_port"]
@@ -163,11 +165,7 @@ class HDFSCHECk():
             ##nodemanager
             # nodemanager_list = load_dict["dependencies"]["hadoop_nodes"]["nodemanager"]
 
-            # print(datanode_list)
-            # print(nodemanager_list)
-            # print(type(datanode_list))
-
-            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos
+            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey
 
     # 认证krb5
     # 如果使用了kerberos，调用此方法
@@ -179,7 +177,7 @@ class HDFSCHECk():
         kconfig = krbticket.KrbConfig(principal=principle, keytab=keytab_file)
         krbticket.KrbCommand.kinit(kconfig)
         # cont = krbticket.KrbTicket.get(keytab=keytab_file,principal=principle)
-        # print(cont)
+
 
     # hdfs 健康检查
     """
@@ -192,16 +190,20 @@ class HDFSCHECk():
             hdfsconfpath = self.hdfsconf_path
             cmd = "hdfs fsck -conf %s /" % hdfsconfpath
             foo = os.popen(cmd=cmd)
-            # for lin in foo.readlines():
-            #     if "The filesystem under path " in lin:
-            #         print(lin)
-            with open(self.BASE_DIR + "/conf/hdfs/fsck.log") as foo:
+
+            filename = "/conf/hdfs/%sfsck.log" % self.datenowstring
+            file_path = BASE_DIR + filename
+
+            with open(file_path, 'w',encoding="utf-8") as file:
+                file.write(foo.read())
+                file.close()
+
+
+            with open(file_path, 'r', encoding="utf-8") as foo:
                 for lin in foo.readlines():
                     if "The filesystem under path " in lin:
-                        print(lin)
+
                         lin = lin.replace("The filesystem under path ", "").split(" is ")
-                        # print("replcaed: " + lin)
-                        # print(lin)
                         hdfs_path = lin[0]
                         hdfs_path_state = lin[1]
                         # print(hdfs_path,hdfs_path_state)
@@ -216,7 +218,7 @@ class HDFSCHECk():
                     if "Number of data-nodes:" in lin:
                         node_num = lin.replace("Number of data-nodes:", "").strip()
                         self.hdfs_node_count = node_num
-                        print(self.hdfs_node_count)
+                        # print(self.hdfs_node_count)
         except Exception as e:
             print(e)
 
@@ -245,26 +247,26 @@ class HDFSCHECk():
                     value = treenode.text
 
                 st = "%s#%s" % (name, value)
-                print(st)
+                # print(st)
                 node_list.append(st)
 
             # 获取文件中的集群名称
             for name in node_list:
                 if "dfs.nameservices" in name:
                     cluster_name = name.split("#")[1]
-                    print(cluster_name)
+                    # print(cluster_name)
 
             # 获取nn1, nn2
             for name in node_list:
                 if "dfs.namenode.rpc-address.%s.nn1" % cluster_name in name:
                     nn1_ip = name.split("#")[1].split(":")[0]
                     nn1_port = name.split("#")[1].split(":")[1]
-                    print(nn1_ip, nn1_port)
+                    # print(nn1_ip, nn1_port)
 
                 if "dfs.namenode.rpc-address.%s.nn2" % cluster_name in name:
                     nn2_ip = name.split("#")[1].split(":")[0]
                     nn2_port = name.split("#")[1].split(":")[1]
-                    print(nn2_ip, nn2_port)
+                    # print(nn2_ip, nn2_port)
 
             self.hdfssite_clustername = cluster_name
 
@@ -294,22 +296,24 @@ class HDFSCHECk():
         clustername_from_config = self.cluster_name
 
         if clustername_from_config == clustername_from_config:
-            print("cluster name in same, ok.")
+            # print("cluster name in same, ok.")
+            pass
         else:
             print("cluster name is not in same ,faile. 检查配置文件配置与hdfs-site.xml文件集群名称配置")
-            exit(101)
 
         if nn1_clustername_from_hdfssite == self.nn1:
-            print(" nn1  is in same, ok.")
+            # print(" nn1  is in same, ok.")
+            pass
         else:
             print("nn1 ip is not in same, fale. 请检查配置文件中nn1与hdfs-site.xml文件中配置")
-            exit(102)
+
 
         if nn2_clustername_from_hdfssite == self.nn2:
-            print("nn2 is in same, ok.")
+            # print("nn2 is in same, ok.")
+            pass
         else:
             print("nn2 ip is not in same, fale. 请检查配置文件中nn2与hdfs-site.xml文件中配置")
-            exit(103)
+
 
         # 检查通过，则进行下一步 ,调用 namenode_api_info
         jsoncont_all_cont1, jsoncont_all_cont2 = self.namenode_api_info(nn1_clustername_from_hdfssite,
@@ -320,7 +324,7 @@ class HDFSCHECk():
 
     # 获取nn接口信息,nn1,nn2都需要获取完成的jmx信息
     def namenode_api_info(self, nn1_clustername_from_hdfssite, nn2_clustername_from_hdfssite):
-        print("调用函数 namenode_api_info 成功")
+        # print("调用函数 namenode_api_info 成功")
         nn1_ip = nn1_clustername_from_hdfssite
         nn2_ip = nn2_clustername_from_hdfssite
 
@@ -332,7 +336,6 @@ class HDFSCHECk():
 
         # nn1 socket check, return boolean,true-->联通，false-->不连通
         connected_nn1 = self.socket_check(nn1_ip, nn1_port)
-        # print(connected_nn1)
         if connected_nn1 == "true":
             cmd = "curl -s --insecure  https://%s:%s/jmx" % (nn1_ip, nn1_port)
             jsoncont_all = os.popen(cmd=cmd)
@@ -356,7 +359,7 @@ class HDFSCHECk():
 
     # 端口连通性检查
     def socket_check(self, ip, port):
-        print("调用函数 socket_check 成功")
+        # print("调用函数 socket_check 成功")
         try:
             s = socket.socket()
             # 设置超时5s,超时返回字符false
@@ -393,6 +396,7 @@ class HDFSCHECk():
     def nn_ha_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
+        jmx_content = json.loads(jmx_content)
         beans = jmx_content["beans"]
         # print(beans)
         for dic in beans:
@@ -408,6 +412,7 @@ class HDFSCHECk():
     def nn_jmx_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
+        jmx_content = json.loads(jmx_content)
         beans = jmx_content["beans"]
         # print(beans)
         for dic in beans:
@@ -424,7 +429,7 @@ class HDFSCHECk():
                 MemHeapCommittedM = dic["MemHeapCommittedM"]
                 # 百分比计算
                 namenode_heap_used_percent = "{:.2%}".format(MemHeapUsedM / MemHeapCommittedM)
-                # print(namenode_heap_used_percent)
+
 
                 # 测试判断逻辑
                 # namenode_heap_used_percent = "77.49%"
@@ -445,7 +450,6 @@ class HDFSCHECk():
             """
             if dic["name"] == "Hadoop:service=NameNode,name=NameNodeInfo":
                 PercentUsed = "{:.2%}".format(dic["PercentUsed"] / 100)
-                # print(PercentUsed)
 
                 # 测试判断逻辑
                 # PercentUsed = "77.49%"
@@ -489,17 +493,6 @@ class HDFSCHECk():
                 deadnnode_num = len(hosts)
                 print("DeadNodes 数量： %s" % (deadnnode_num))
 
-                # # hosts = dict.keys(livenodes)
-                # # print(hosts)
-                # for host_port in hosts:
-                #     host = host_port.split(":")[0]
-                #     port = host_port.split(":")[1]
-                #     value = livenodes.get(host_port)
-                #     print(value)
-                #     # value_ofhost = eval(value)
-                #     ipaddr = value["infoAddr"].split(":")[0]
-                #     print(ipaddr)
-                #     exit(0)
 
                 """
                 datanode is down
@@ -508,10 +501,7 @@ class HDFSCHECk():
                 if deadnnode_num != 0:
                     for host_ip in deadnodes.keys():
                         host, port = host_ip.split(":")
-                        # print(host)
-                        # print(port)
                         ip = deadnodes.get(host_ip).get("xferaddr").split(":")[0]
-                        # print(ip)
                         host_ip = "%s#%s" % (host, ip)
                         deadnnode_list.append(host_ip)
 
@@ -530,7 +520,7 @@ class HDFSCHECk():
             if dic["name"] == "Hadoop:service=NameNode,name=FSNamesystem":
                 # 集群DN节点磁盘(Total Datanode Volume Failures）
                 VolumeFailuresTotal = dic["VolumeFailuresTotal"]
-                print("集群DN节点磁盘(Total Datanode Volume Failures）数量: %s " % VolumeFailuresTotal)
+                print("Total Datanode Volume Failures: %s " % VolumeFailuresTotal)
 
             """
             Hadoop:service=NameNode,name=NameNodeStatus
@@ -573,6 +563,9 @@ class HDFSCHECk():
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        ssh_key = paramiko.RSAKey.from_private_key_file(ssh_key)
+
         if use_pwd == "true":
             pwd = password
             ssh.connect(ip, port, user, password, timeout=10)
@@ -612,8 +605,8 @@ class HDFSCHECk():
         port = namenode_port
 
         pswc_cmd = "ps -ef |grep namenode.NameNode|grep -v grep|wc -l"
-        user = "pe"
-        keyfile_path = "/home/%s/.ssh/" % user
+        user = self.ssh_user
+        keyfile_path = self.ssh_pkey
 
         nn_ssh_result = self.ssh_connect(ip=ip, port=22, password="", use_pwd="false", ssh_keyfile=keyfile_path,
                                           user=user, cmd=pswc_cmd)
@@ -622,15 +615,12 @@ class HDFSCHECk():
         # 服务存在且端口正验证正常视为Namenode正常
         # 理论上要先检查Namenode状态之后进行下一步
         if nn_ssh_result == "true" and socket_ck_re == "true":
-            print("IP: %s 上的NameNode服务状态：Notdown")
-
+            print("IP: %s 上的NameNode服务状态：Notdown" % namenode_ip)
             return "alive"
         else:
-            print("IP: %s 上的NameNode服务状态：Down")
+            print("IP: %s 上的NameNode服务状态：Down" % namenode_ip)
             return "down"
 
-        # if self.socket_check(ip=nn2_ip, port=nn2_port) == "false":
-        #     print("端口检查失败，%s 端口检查不通" % self.nn1)
 
     # 分析参数确定是否手动执行
     def arg_analyse(self):
@@ -654,7 +644,6 @@ class HDFSCHECk():
     计算 HDFS日增长
     """
     def diff_of_hdfsAdded(self):
-        # print("diff_of_hdfsAdded")
         # 前一天文件路径
         # 定时任务执行
         use_crontab = self.use_crontab
@@ -696,8 +685,6 @@ class HDFSCHECk():
 
                 with open(abs_path_of_file, 'r', encoding="utf-8") as file:
                     lastday_cap_json = json.load(file)
-                    # lastday_cap_json = str(lastday_cap_json)
-                    print(type(lastday_cap_json))
                     # 1408.71GB
                     lastday_cap = lastday_cap_json["hdfscap"]
 
@@ -705,8 +692,8 @@ class HDFSCHECk():
                     file.close()
 
                 # 计算(fload类型)
-                print("curday_cap_str--> " + curday_cap_str)
-                print("lastday_cap--> " + lastday_cap)
+                # print("curday_cap_str--> " + curday_cap_str)
+                # print("lastday_cap--> " + lastday_cap)
                 hdfs_cap_added = float(curday_cap_str.replace("GB", "")) - float(lastday_cap.replace("GB", ""))
                 # 将当天算得的数据写入记录文件
                 # file_lastname = "_crontab_hdfs_capcity.json"
@@ -721,7 +708,7 @@ class HDFSCHECk():
 
             else:
                 # 如果不存在，写入当前获取的数据到当前日期的文件中，跳过计算，设置/返回增长量为当前获取的hdfs ca指标数值
-                print(file_exsited.__str__())
+                # print(file_exsited.__str__())
                 # file_lastname = "_crontab_hdfs_capcity.json"
                 # 文件不存在，直接写入当天数据到本地，设置grouadd的值与hdfs cap 值相等
                 curdayofnowstring = self.datenowstring
@@ -730,7 +717,7 @@ class HDFSCHECk():
 
                 curday_cap = self.curday_cap
                 curday_cap_str = "{:.2%}".format(curday_cap / 100).replace("%", "GB")
-                print("前一天文件不存在-->" + curday_cap_str)
+                # print("前一天文件不存在-->" + curday_cap_str)
                 hdfs_cap_added = curday_cap_str
 
                 with open(abs_path_of_file_cur, 'w', encoding="utf-8") as f:
@@ -793,7 +780,7 @@ class HDFSCHECk():
                 print("HFDS增长量为: %sGB" % hdfs_cap_added)
             else:
                 # 如果不存在，则视为第一次运行
-                print("file_exsited.__str__() --> " + file_exsited.__str__())
+                # print("file_exsited.__str__() --> " + file_exsited.__str__())
                 # file_lastname = "_crontab_hdfs_capcity.json"
                 # 文件不存在，直接写入当天数据到本地，设置grouadd的值与hdfs cap 值相等
                 curdayofnowstring = self.datenowstring
@@ -825,9 +812,6 @@ def main_one():
         print("nn2 namenode服务疑似 down， 请检查！")
         exit(302)
 
-
-
-
     # 处理hdfs-site.xml文件返回值
     cluster_name, nn1_ip, nn2_ip = checker.hdfs_site_conf()
     # 检查配置文件信息核对，核对之后调用 namenode_api_info 返回jmx信息值
@@ -850,6 +834,10 @@ def main_one():
         exit(502)
 
     checker.diff_of_hdfsAdded()
+
+    # 进行健康检查
+    checker.krb5init()
+    checker.hdfs_health_check()
 
 
 if __name__ == '__main__':
