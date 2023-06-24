@@ -4,17 +4,17 @@
   "dependencies": {
     "config": {
       "use_kerberos": "true",
-      "cluster_name": "liveme_aboard",
+      "cluster_name": "ocean-bdp3",
       "user": "hdfs",
       "num": "4",
       "second": "5",
-      "hdfsconf": "hdfs-sit.xml",
+      "hdfsconf": "hdfs-site.xml",
       "ssh_user": "root",
       "ssh_pkey": "/root/.ssh/id_rsa"
     },
     "kerberos": {
       "krb5conf": "/etc/krb5.conf",
-      "keytab": "/export/kerber/1/hdfs.keytab",
+      "keytab": "/export/kerberos/1/hdfs.keytab",
       "client_principle": "hdfs/ocean@JD.COM"
     },
     "hadoop_nodes": {
@@ -27,11 +27,11 @@
       "resourcemanager": {
         "rm1": "10.0.0.47",
         "rm1_port": "8088",
-        "rm2": "10.0.0.45",
+        "rm2": "10.0.0.42",
         "rm2_port": "8088"
       },
-      "datanode": ["192.168.61.208","192.168.61.209"],
-      "nodemanager": ["192.168.61.208","192.168.61.209"]
+      "datanode": ["10.0.0.48","10.0.0.40","10.0.0.44","10.0.0.41","10.0.0.43","10.0.0.39","10.0.0.46"],
+      "nodemanager": ["10.0.0.48","10.0.0.40","10.0.0.44","10.0.0.41","10.0.0.43","10.0.0.39","10.0.0.46"]
     }
   }
 }

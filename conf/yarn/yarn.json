@@ -1,0 +1,46 @@
+{
+  "name": "yarn",
+  "version": "1.0.0",
+  "dependencies": {
+    "config": {
+      "use_kerberos": "true",
+      "cluster_name": "ocean-bdp3",
+      "user": "hdfs",
+      "num": "4",
+      "second": "5",
+      "hdfsconf": "yarn-site.xml",
+      "ssh_user": "root",
+      "ssh_pkey": "/root/.ssh/id_rsa"
+    },
+    "kerberos": {
+      "krb5conf": "/etc/krb5.conf",
+      "keytab": "/export/kerberos/1/hdfs.keytab",
+      "client_principle": "hdfs/ocean@JD.COM"
+    },
+    "hadoop_nodes": {
+      "namenode": {
+        "nn1": "10.0.0.47",
+        "nn1_port": "50470",
+        "nn2": "10.0.0.45",
+        "nn2_port": "50470"
+      },
+      "resourcemanager": {
+        "rm1": "10.0.0.47",
+        "rm1_port": "8088",
+        "rm2": "10.0.0.42",
+        "rm2_port": "8088"
+      },
+      "datanode": ["10.0.0.48","10.0.0.40","10.0.0.44","10.0.0.41","10.0.0.43","10.0.0.39","10.0.0.46"],
+      "nodemanager": [
+        {"hostname": "ocean-bigdata-1a-26","ip":"10.0.0.48"},
+        {"hostname": "ocean-bigdata-1a-25","ip":"10.0.0.40"},
+        {"hostname": "ocean-bigdata-1a-23","ip":"10.0.0.44"},
+        {"hostname": "ocean-bigdata-1a-29","ip":"10.0.0.41"},
+        {"hostname": "ocean-bigdata-1a-24","ip":"10.0.0.43"},
+        {"hostname": "ocean-bigdata-1a-27","ip":"10.0.0.39"},
+        {"hostname": "ocean-bigdata-1a-28","ip":"10.0.0.46"}
+      ],
+      "nodemanagerJmxport": "8042"
+    }
+  }
+}

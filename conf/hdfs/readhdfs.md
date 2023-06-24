@@ -42,3 +42,8 @@ python3 hdfs.py use_crontab="false"
 python3 hdfs.py use_crontab=false
 python3 hdfs.py
 ```
+
+```shell script
+# 定时任务
+30 4 * * * /usr/bin/python3 /export/monitor_xjjk/bin/hdfs.py use_crontab="true"
+```

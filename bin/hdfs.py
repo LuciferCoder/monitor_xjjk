@@ -69,14 +69,14 @@ sys.path.append(BASE_DIR)
 # from conf import Alarm as Alarm, Logger as Logger
 from conf import Logger as Logger
 
-warnings.filterwarnings('ignore')
+# warnings.filterwarnings('ignore')
 
 
 class HDFSCHECk():
 
     def __init__(self):
         self.BASE_DIR = BASE_DIR
-        self.client = ""
+        # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/hdfs/hdfs.json"
         name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey = self._json_parse()
         self.name = name
@@ -211,8 +211,7 @@ class HDFSCHECk():
                         if hdfs_path_state == "HEALTHY":
                             print("HDFS路径 %s 健康状态检查结果为 %s" % (hdfs_path, hdfs_path_state))
                         else:
-                            print("HDFS路径 %s 健康状态检查结果为 %s , 请检查hdfs块信息健康状态并进行处理!!!" % (
-                                hdfs_path, hdfs_path_state))
+                            print("HDFS路径 %s 健康状态检查结果为 %s , 请检查hdfs块信息健康状态并进行处理!!!" % (hdfs_path, hdfs_path_state))
 
                     # 抓取hdfsnode数量：
                     if "Number of data-nodes:" in lin:
@@ -346,7 +345,8 @@ class HDFSCHECk():
             # exit(201)
 
         connected_nn2 = self.socket_check(nn2_ip, nn2_port)
-        if connected_nn1 == "true":
+        # 更正了nn2探活参数不正确bug 2023年6月24日22:44:57
+        if connected_nn2 == "true":
             cmd = "curl -s --insecure  https://%s:%s/jmx" % (nn2_ip, nn2_port)
             jsoncont_all = os.popen(cmd=cmd)
             jsoncont_all_cont2 = jsoncont_all.read()
@@ -823,6 +823,7 @@ def main_one():
     nn1_ha_state = checker.nn_ha_analyse(checker.nn1_jmx)
     nn2_ha_state = checker.nn_ha_analyse(checker.nn2_jmx)
 
+    # 判断active，抓取指标
     if nn1_ha_state == "active" and nn2_ha_state =="standby":
         jmx_cont = checker.nn1_jmx
         checker.nn_jmx_analyse(jmx_cont)
@@ -833,10 +834,12 @@ def main_one():
         print("namenode HA 状态检查异常：nn1_ha_state 为 %s ;  nn2_ha_state 为 %s .请运维立即检查所有Namenode状态，并进行恢复")
         exit(502)
 
+    # hdfs 增长
     checker.diff_of_hdfsAdded()
 
     # 进行健康检查
-    checker.krb5init()
+    if checker.use_kerberos == "true":
+        checker.krb5init()
     checker.hdfs_health_check()
 
 
