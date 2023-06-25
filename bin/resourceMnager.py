@@ -63,7 +63,7 @@ class ResourceManager():
         self.AllocatedMB = ""
         self.BASE_DIR = BASE_DIR
         # self.client = ""
-        self.jsonfile_path = self.BASE_DIR + "/conf/yarn/yarn.json"
+        self.jsonfile_path = self.BASE_DIR + "/conf/yarn/hive.json"
         name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport = self._json_parse()
         self.name = name
         self.version = version
