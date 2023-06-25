@@ -18,25 +18,6 @@ import paramiko
 from datetime import datetime, timedelta
 
 """
-resourceManager 检测指标
-（1）YARN任务排队超过10min
-（2）YARN上没有足够可分配的资源
-（3）YARNNodeManager不健康，请检查磁盘空间使用率是否超过90%
-（4）YARN运行的Job过多
-（5）队列资源监控
-（6）YRAN计算任务过多
-（7）YARN计算任务延迟
-（8）YarnNodeManager is down
-（9）YarnResourceManager is down
-（10）Pengding作业数量
-（11）每天用户提交的作业数
-（12）失败作业数
-（13）正在运行的作业数量
-（14）资源使用情况
-（15）Nodemanager 的GC 时间
-"""
-
-"""
 # 李冬亮
 # 03月24日 00:08
 """
@@ -73,10 +54,17 @@ from conf import Logger as Logger
 class ResourceManager():
     # init 初始化内部变量,初始化内部参数
     def __init__(self):
+        self.AppsSubmitted = ""
+        self.AvailableMB = ""
+        self.AvailableVCores = ""
+        self.AllocatedVCores = ""
+        self.FairShareVCores = ""
+        self.FairShareMB = ""
+        self.AllocatedMB = ""
         self.BASE_DIR = BASE_DIR
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/yarn/yarn.json"
-        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey = self._json_parse()
+        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -89,14 +77,33 @@ class ResourceManager():
         self.rm1_port = rm1_port
         self.rm2_port = rm2_port
         self.nodemanager_list = nodemanager_list
+        # 配置文件中namenode节点个数
+        self.nodemanager_list_lenth = len(self.nodemanager_list)
         self.use_kerberos = use_kerberos
         self.ssh_user = ssh_user
         self.ssh_pkey = ssh_pkey
+        self.nodemanagerJmxport = nodemanagerJmxport
 
         self.yarn_site_filepath = self.BASE_DIR + "/conf/yarn/yarn-site.xml"
         self.yarnsite_clustername = ""
+        self.nodemanager_alive_num_from_jmx = ""
 
-    # json配置文件分析
+        # 指标抓取的Nodemanagers，返回列表
+        self.LiveNodeManagers = []
+
+        # 判断nodemanager alive之后返回的 alive状态的实际列表
+        self.alive_ip_host_list = []
+
+        self.nodemanager_gctime_list = []
+
+        # 集群状态不健康
+        self.nodemanager_NumUnhealthyNMs = 0
+
+        self.AppsPending = ""
+        self.AppsFailed = ""
+
+        # json配置文件分析
+
     # 解析配置文件，获取hadoop yarn节点信息(已完成，内部返回类中的变量使用)
     # 创建类的对象时就初始化完成了yarn.json文件的分析
     def _json_parse(self):
@@ -135,7 +142,10 @@ class ResourceManager():
             # dic list
             nodemanager_list = load_dict["dependencies"]["hadoop_nodes"]["nodemanager"]
 
-            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey
+            # nodemanager_port
+            nodemanagerJmxport = load_dict["dependencies"]["hadoop_nodes"]["nodemanagerJmxport"]
+
+            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport
 
     # yarn-site.xml文件处理，返回参数
     # 逻辑中尚未用到
@@ -179,7 +189,7 @@ class ResourceManager():
                     rm1_port = name.split("#")[1].split(":")[1]
                     # print(nn1_ip, nn1_port)
 
-                if "yarn.resourcemanager.webapp.address.rm2"  in name:
+                if "yarn.resourcemanager.webapp.address.rm2" in name:
                     rm2_ip = name.split("#")[1].split(":")[0]
                     rm2_port = name.split("#")[1].split(":")[1]
                     # print(nn2_ip, nn2_port)
@@ -219,7 +229,6 @@ class ResourceManager():
         except Exception as e:
             print(e)
             return "false"
-
 
     # 包装远程连接方法，执行命令返回结果
     def ssh_connect(self, ip, port, user, password, use_pwd, ssh_keyfile, cmd):
@@ -276,7 +285,6 @@ class ResourceManager():
             ha_state = "alive"
             return ha_state
 
-
     # 分析参数确定是否手动执行
     def arg_analyse(self):
         args = sys.argv
@@ -290,25 +298,23 @@ class ResourceManager():
         else:
             self.use_crontab = "false"
 
-
-
     # yarn resourceManager 是否宕机
     # 调用 paramikossh
     # 服务进程不存在，且端口探活为失败
     # resourcemanager
     def yarn_resourcemanager_is_down(self, yarn_ip, yarn_port):
         ip = yarn_ip
-        port =  yarn_port
+        port = yarn_port
         pswc_cmd = "ps -ef |grep resourcemanager.ResourceManager|grep -v grep|wc -l"
         user = self.ssh_user
         keyfile_path = self.ssh_pkey
 
         # 端口探活
-        socket_ck_re = self.socket_check(ip=yarn_ip,port=yarn_port)
+        socket_ck_re = self.socket_check(ip=yarn_ip, port=yarn_port)
 
         # 服务检查
         nn_ssh_result = self.ssh_connect(ip=ip, port=22, password="", use_pwd="false", ssh_keyfile=keyfile_path,
-                                          user=user, cmd=pswc_cmd)
+                                         user=user, cmd=pswc_cmd)
 
         # 此处逻辑：
         # 服务存在且端口正验证正常视为Namenode正常
@@ -319,7 +325,6 @@ class ResourceManager():
         else:
             print("IP: %s 上的NameNode服务状态：Down" % yarn_ip)
             return "down"
-
 
     # namenode jmx接口信息分析处理，获取其他信息的重要函数步骤
     # 主要功能获取两个namenode上额jmx信息
@@ -334,7 +339,7 @@ class ResourceManager():
     """
 
     def resourceManager_jmx_info_cx(self, clustername_from_hdfssite, nn1_clustername_from_hdfssite,
-                             nn2_clustername_from_hdfssite):
+                                    nn2_clustername_from_hdfssite):
         # （1）判断集群名称是否与脚本配置文件中的相同，相同则继续检查hdfs文件中的两个ip是否与脚本配置文件中的角色对称
         clustername_from_hdfssite = clustername_from_hdfssite
         clustername_from_config = self.cluster_name
@@ -351,21 +356,18 @@ class ResourceManager():
         else:
             print("nn1 ip is not in same, fale. 请检查配置文件中nn1与hdfs-site.xml文件中配置")
 
-
         if nn2_clustername_from_hdfssite == self.rm2:
             # print("nn2 is in same, ok.")
             pass
         else:
             print("nn2 ip is not in same, fale. 请检查配置文件中nn2与hdfs-site.xml文件中配置")
 
-
         # 检查通过，则进行下一步 ,调用 namenode_api_info
         jsoncont_all_cont1, jsoncont_all_cont2 = self.resourceManager_api_info(nn1_clustername_from_hdfssite,
-                                                                        nn2_clustername_from_hdfssite)
+                                                                               nn2_clustername_from_hdfssite)
 
         self.nn1_jmx = jsoncont_all_cont1
         self.nn2_jmx = jsoncont_all_cont2
-
 
     # 获取nn接口信息,rm1,rm2都需要获取完成的jmx信息
     # def namenode_api_info(self, nn1_clustername_from_hdfssite, nn2_clustername_from_hdfssite):
@@ -403,9 +405,12 @@ class ResourceManager():
 
         return jsoncont_all_cont1, jsoncont_all_cont2
 
+    # resourManager 指标抓取函数 （待修正为RM的抓取指标）
+    """
+    抓取nodemanager的个数    完成
+    
+    """
 
-
-# resourManager 指标抓取函数 （待修正为RM的抓取指标）
     def nn_jmx_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
@@ -416,131 +421,229 @@ class ResourceManager():
             # 开始取指标
             # 取namenode堆内存指标
             """
-            指标： Hadoop:service=NameNode,name=JvmMetrics
-            百分比：MemHeapUsedM/MemHeapCommittedM
-            Namenode 堆内存使用率
-            HeapMemoryUsage.used/HeapMemoryUsage.committed
+            抓取nodemanager的个数
+            指标：Hadoop:service=ResourceManager,name=ClusterMetrics
             """
-            if dic["name"] == "Hadoop:service=NameNode,name=JvmMetrics":
-                MemHeapUsedM = dic["MemHeapUsedM"]
-                MemHeapCommittedM = dic["MemHeapCommittedM"]
-                # 百分比计算
-                namenode_heap_used_percent = "{:.2%}".format(MemHeapUsedM / MemHeapCommittedM)
+            if dic["name"] == "Hadoop:service=ResourceManager,name=ClusterMetrics":
+                nodemanager_alive_num = dic["NumActiveNMs"]
+                self.nodemanager_alive_num_from_jmx = nodemanager_alive_num
 
+            """
+            抓取 alive 状态的nodemanager列表
+            指标：Hadoop:service=ResourceManager,name=RMNMInfo
+            """
+            if dic["name"] == "Hadoop:service=ResourceManager,name=RMNMInfo":
+                LiveNodeManagers = dic["LiveNodeManagers"]
+                # 返回列表
+                self.LiveNodeManagers = LiveNodeManagers
 
-                # 测试判断逻辑
-                # namenode_heap_used_percent = "77.49%"
-                # namenode_heap_used_percent = "91.49%"
+            """
+            NumUnhealthyNMs
+            指标：Hadoop:service=ResourceManager,name=ClusterMetric
+            NumUnhealthyNMs
+            """
+            if dic["name"] == "Hadoop:service=ResourceManager,name=ClusterMetrics":
+                nodemanager_NumUnhealthyNMs = dic["NumUnhealthyNMs"]
+                self.nodemanager_NumUnhealthyNMs = nodemanager_NumUnhealthyNMs
 
-                # 判断返回指标：
-                if float(namenode_heap_used_percent.strip("%")) >= 70 and float(
-                        namenode_heap_used_percent.strip("%")) < 90:
-                    print("HDFSNameNode堆内存使用率超过70%")
-                elif float(namenode_heap_used_percent.strip("%")) >= 90:
-                    print("HDFSNameNode堆内存使用率超过90%")
+    """
+    # yarn nodemanager is down
+    # 调用 paramikossh
+    # 服务进程不存在，且端口探活为失败
+    # nodemanager
+    """
+
+    def nodemanager_is_down(self):
+
+        # jmx中的数量与配置文件中的相同：返回nodemanager正常，否则不正常
+        if self.nodemanager_alive_num_from_jmx == self.nodemanager_list_lenth:
+            print("nodemanager 服务正常")
+        else:
+            hostname_list = self.nodemanager_list
+
+            hostname_jmx_list = []
+
+            for hostnamejmx in self.LiveNodeManagers:
+                hostname_jmx = hostnamejmx["HostName"]
+                hostname_jmx_list.append()
+
+            down_ip_host_list = []
+            alive_ip_host_list = []
+
+            for hostname_ip in hostname_list:
+                hostname = hostname_ip["hostname"]
+                ip = hostname_ip["ip"]
+                if hostname in hostname_jmx_list:
+                    alive_ip_host_list.append(hostname_ip)
                 else:
-                    print("HDFSNameNode堆内存使用率为%s" % namenode_heap_used_percent)
+                    # 字符串不在列表中，则为down状态的nodemanager
+                    down_ip_host_list.append(hostname_ip)
 
-            """
-            空间使用率: 采集指标
-            PercentUsed
-            """
-            if dic["name"] == "Hadoop:service=NameNode,name=NameNodeInfo":
-                PercentUsed = "{:.2%}".format(dic["PercentUsed"] / 100)
+            # down_ip_host_list 不为0 打印down状态的主机ip
+            if len(down_ip_host_list) == 0:
+                print("Nodemanager is Down: %s " % str(len(down_ip_host_list)))
+            else:
+                for doonip in down_ip_host_list:
+                    ip = doonip["ip"]
+                    port = self.nodemanager_port
+                    hostname = doonip["ip"]
+                    pswc_cmd = "ps -ef |grep resourcemanager.ResourceManager|grep -v grep|wc -l"
+                    user = self.ssh_user
+                    keyfile_path = self.ssh_pkey
 
-                # 测试判断逻辑
-                # PercentUsed = "77.49%"
-                # PercentUsed = "91.49%"
+                    # 端口探活
+                    socket_ck_re = self.socket_check(ip=ip, port=port)
 
-                # 判断返回指标：
-                if float(PercentUsed.strip("%")) >= 70 and float(PercentUsed.strip("%")) < 90:
-                    print("HDFS使用率超过70%")
-                elif float(PercentUsed.strip("%")) >= 90:
-                    print("HDFS使用率超过90%")
-                else:
-                    print("HDFS使用率 %s" % PercentUsed)
+                    # 服务检查
+                    nn_ssh_result = self.ssh_connect(ip=ip, port=22, password="", use_pwd="false",
+                                                     ssh_keyfile=keyfile_path,
+                                                     user=user, cmd=pswc_cmd)
 
-                """
-                liveNodes node: liveNodes
-                DeadNodes
-                打印数量
-                """
-                # #Hadoop:service=NameNode,name=NameNodeInfo
-                # liveNodes 指标
-                # DeadNodes
-                LiveNodes = dic["LiveNodes"]
-                # 字符串转字典格式
-                # livenodes = eval(LiveNodes)
-                livenodes = json.loads(LiveNodes)
-                hosts = livenodes.keys()
-                # 存活节点数：livenodes_num
-                livenodes_num = len(hosts)
-                print("LiveNodes 数量： %s" % (livenodes_num))
+                    # 此处逻辑：
+                    # 服务存在且端口正验证正常视为Namenode正常
+                    # 理论上要先检查Namenode状态之后进行下一步
+                    if socket_ck_re == "true" and nn_ssh_result == "true":
+                        print("IP: %s 上的nodemanager服务状态：Notdown" % ip)
+                        # return "alive"
+                    else:
+                        print("IP: %s 上的nodemanager服务状态：Down" % ip)
+                        # return "down"
+            self.alive_ip_host_list = alive_ip_host_list
 
-                """
-                DeadNodes node: DeadNodes
-                DeadNodes
-                打印IP?
-                """
-                DeadNodes = dic["DeadNodes"]
-                # 字符串转字典格式
-                deadnodes = json.loads(DeadNodes)
-                hosts = deadnodes.keys()
-                # 存活节点数：deadnodes
-                deadnnode_num = len(hosts)
-                print("DeadNodes 数量： %s" % (deadnnode_num))
+    """
+    指标：Nodemanager gc 时间
+    Nodemanager 的GC 时间  nodemanager jmx 
+    指标key：Hadoop:service=NodeManager,name=JvmMetrics
+    关键字：GcTimeMillis
+    单位：毫秒
+    """
 
+    def get_nodemanager_jmx_info_GcTimeMillis(self, cmd):
+        result = os.popen(cmd=cmd)
+        result_json = json.loads(result)
+        beans = result_json["bean"]
+        bean = beans[0]
+        bean_json = json.loads(bean)
+        result = bean_json["GcTimeMillis"]
+        return result
 
-                """
-                datanode is down
-                """
-                deadnnode_list = []
-                if deadnnode_num != 0:
-                    for host_ip in deadnodes.keys():
-                        host, port = host_ip.split(":")
-                        ip = deadnodes.get(host_ip).get("xferaddr").split(":")[0]
-                        host_ip = "%s#%s" % (host, ip)
-                        deadnnode_list.append(host_ip)
+    # nodemanager jmx监控信息处理
+    def nodemanager_jmx_analyse(self):
+        alive_nodemanagers_list = self.alive_ip_host_list
+        nodemanager_port = self.nodemanagerJmxport
 
-                for host_ip in deadnnode_list:
-                    hostname, ip = host_ip.split("#")
-                    # use_crontab == false,打印到console，定时任务只抓取DeadNodes指标,
-                    # 可以使用手动执行的巡检方式打印出DeadNodes主机以及IP
-                    if self.use_crontab == "false":
-                        print("deadnode 主机名：%s ip: %s is down." % (hostname, ip))
+        for host_list in alive_nodemanagers_list:
+            hostname = host_list["hostname"]
+            ip = host_list["ip"]
+            # GC Time
+            # cmd = "curl http://%s:%s/jmx?qry="Hadoop:service=NodeManager,name=JvmMetrics" %(ip, port)
+            cmd = "curl http://%s:%s/jmx?qry=Hadoop:service=NodeManager,name=JvmMetrics" % (ip, nodemanager_port)
 
-            """
-            集群DN节点磁盘(Total Datanode Volume Failures）
-            采集指标：VolumeFailuresTotal
-            Hadoop:service=NameNode,name=FSNamesystem
-            """
-            if dic["name"] == "Hadoop:service=NameNode,name=FSNamesystem":
-                # 集群DN节点磁盘(Total Datanode Volume Failures）
-                VolumeFailuresTotal = dic["VolumeFailuresTotal"]
-                print("Total Datanode Volume Failures: %s " % VolumeFailuresTotal)
+            # 调用json处理 get_nodemanager_jmx_info_GcTimeMillis
+            gctime = self.get_nodemanager_jmx_info_GcTimeMillis(cmd)
+            # print("主机： %s, IP: %s,GCTime 为 %s 毫秒.") % (hostname, ip, gctime)
+            self.nodemanager_gctime_list.append('{"hostname": "%s","ip": "%s", "gctime":"%s"}') % (hostname, ip, gctime)
 
-            """
-            Hadoop:service=NameNode,name=NameNodeStatus
-            HA状态
-            """
-            if dic["name"] == "Hadoop:service=NameNode,name=NameNodeStatus":
-                # 判断当前节点ha状态
-                HostAndPort = dic["HostAndPort"]
-                host, port = HostAndPort.split(":")
-                State = dic["State"]
-                print("主机： %s namenode的HA状态为： %s " % (host, State))
+    def nodemanager_gc_time(self):
+        nodemanager_gc_time_list = self.nodemanager_gctime_list
+        for gctime_host in nodemanager_gc_time_list:
+            hostname = gctime_host["gctime_host"]
+            ip = gctime_host["gctime_host"]
+            gc_time = gctime_host["gctime"]
+            print("主机： %s, IP: %s,GCTime 为 %s 毫秒.") % (hostname, ip, gc_time)
 
-            """
-            CapacityUsed
-            采集指标：CapacityUsed
-            Hadoop:service=NameNode,name=FSNamesystem
-            """
-            if dic["name"] == "Hadoop:service=NameNode,name=FSNamesystem":
-                # 判断当前节点ha状态
-                CapacityUsed = dic["CapacityUsed"]
-                CapacityUsedGB = int(CapacityUsed) / 1024 / 1024 / 1024
-                self.curday_cap = CapacityUsedGB
+    # 队列资源分析
+    def queue_analyse_jmx(self, rmip, rmport):
+        ip = rmip
+        port = rmport
+        cmd = "http://%s:%s/jmx?qry=Hadoop:service=ResourceManager,name=QueueMetrics,q0=root"
+        bens = os.popen(cmd=cmd)
+        beans_json - json.loads(bens)
+        bean = beans_json["beans"][0]
+        bean_json = json.loads(bean)
 
+        # 指标：Pengding作业数量
+        AppsPending = bean_json["AppsPending"]
+        self.AppsPending = AppsPending
+        print("Pengding作业数量: %s " % str(self.AppsPending))
+
+        # 指标：失败作业数
+        AppsFailed = bean_json["AppsFailed"]
+        self.AppsFailed = AppsFailed
+        print("失败作业数: %s" % str(self.AppsFailed))
+
+        # 指标： 正在运行的作业数量 AppsRunning
+        AppsRunning = bean_json["AppsRunning"]
+        self.AppsRunning = AppsRunning
+        print("正在运行的作业数量: %s " % self.AppsRunning)
+
+        # FairShareMB 全部内存资源（全部资源）
+        FairShareMB = bean_json["FairShareMB"]
+        self.FairShareMB = FairShareMB
+
+        # 剩余内存资源 AvailableMB
+        AvailableMB = bean_json["AvailableMB"]
+        self.AvailableMB = AvailableMB
+
+        # AllocatedMB 使用中的内存资源
+        # AllocatedMB = bean_json["AllocatedMB"]
+        self.AllocatedMB = self.FairShareMB - self.AllocatedMB
+
+        # 所有内核数
+        FairShareVCores = bean_json["FairShareVCores"]
+        self.FairShareVCores = FairShareVCores
+
+        # 剩余的内核数
+        AvailableVCores = bean_json["AvailableVCores"]
+        self.AvailableVCores = AvailableVCores
+
+        # 使用中的内核数
+        # AllocatedVCores = bean_json["AllocatedVCores"]
+        self.AllocatedVCores = self.FairShareVCores - self.AvailableVCores
+
+        # 指标：资源使用情况
+        print("资源使用情况: \r\n    已使用核数：%s 未使用核数：%s ; 已使用内存: %sMB  剩余内存资源: %sMB" %
+              (self.AllocatedVCores, self.AvailableVCores, self.AllocatedMB, self.AvailableMB))
+
+        # 指标：队列资源监控
+        # 队列root的使用率
+        rootQueue_usage_percent = "{:.2%}".format(float(self.AllocatedMB) / float(self.AvailableMB) / 100)
+        print("队列资源监控: root队列使用率 %s " % rootQueue_usage_percent)
+
+        # 指标： YARN上没有足够可分配的资源
+        # 低于yarn容器最低资源要求
+        if int(self.AvailableVCores) < 1 or int(self.AllocatedMB) < 1024:
+            print("YARN上没有足够可分配的资源")
+
+        # 指标：
+        # （6）YRAN计算任务过多
+        # （7）YARN计算任务延迟
+        # （4）YARN运行的Job过多
+        # 其他的467都是pending那个数值大于3就是过多job
+        # 和计算任务过多，大于10就算延迟了
+
+        if self.AppsPending == 0:
+            pass
+        elif self.AppsPending >= 1 and self.AppsPending <= 3:
+            print("Yarn 队列Pending 数量：%s" % self.AppsPending)
+        elif self.AppsPending > 3 and self.AppsPending <= 10:
+            print("YRAN计算任务过多 / YARN运行的Job过多")
+        else:
+            print("YARN计算任务延迟")
+
+        # 指标参数：AppsSubmitted 提交的App数
+        AppsSubmitted = bean_json["AvailableVCores"]
+        self.AppsSubmitted = AppsSubmitted
+
+    # 待编辑计算的参数
+    # （1）YARN任务排队超过10min
+    # （11）每天用户提交的作业数
+
+    def job_pendding_tenminitues(self):
+        pass
+
+    def job_submitted_calculate(self):
+        pass
 
 
 def main_one():
@@ -554,18 +657,18 @@ def main_one():
     if resourmanager.use_kerberos == "true":
         resourmanager.krb5init()
 
-    # resourcemanager is down
+    # resourcemanager is down （完成）
     # 测试namenode
-    rm1_state = resourmanager.Namenode_is_down(resourmanager.rm1, resourmanager.rm1_port)
-    rm2_state = resourmanager.Namenode_is_down(resourmanager.rm2, resourmanager.rm2_port)
+    rm1_state = resourmanager.yarn_resourcemanager_is_down(resourmanager.rm1, resourmanager.rm1_port)
+    rm2_state = resourmanager.yarn_resourcemanager_is_down(resourmanager.rm2, resourmanager.rm2_port)
 
     # 服务状态不正常的情况下打印提醒退出程序，此处可以编辑发送邮件提醒/短信提醒
     if rm1_state == "down":
-        print("nn1 namenode服务疑似 down，请检查！")
+        print("rm1 resourceManager服务疑似 down，请检查！")
         exit(301)
 
     if rm2_state == "down":
-        print("nn2 namenode服务疑似 down， 请检查！")
+        print("rm1 resourceManager服务疑似 down， 请检查！")
         exit(302)
 
     # 处理yarn-site.xml文件返回值
@@ -580,18 +683,102 @@ def main_one():
     rm1_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn1_jmx)
     rm2_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn2_jmx)
 
-    if rm1_ha_state == "active" and rm2_ha_state =="standby":
+    if rm1_ha_state == "active" and rm2_ha_state == "standby":
         jmx_cont = resourmanager.nn1_jmx
         resourmanager.nn_jmx_analyse(jmx_cont)
-    elif rm1_ha_state == "standby" and rm2_ha_state =="active":
+    elif rm1_ha_state == "standby" and rm2_ha_state == "active":
         jmx_cont = resourmanager.nn2_jmx
         resourmanager.nn_jmx_analyse(jmx_cont)
     else:
-        print("resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
+        print(
+            "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
+        exit(502)
+
+    # 指标：nodemanager is down（完成）
+    resourmanager.nodemanager_is_down()
+
+    # nodemanger gc time
+    """
+    Nodemanager 的GC时间
+    单位：ms
+    完成
+    """
+    resourmanager.nodemanager_gc_time()
+
+    # 指标 nodemanager不健康 (完成)
+    if int(resourmanager.nodemanager_NumUnhealthyNMs) == 0:
+        pass
+    else:
+        print("YARNNodeManager不健康，请检查磁盘空间使用率是否超过90%")
+
+    # rmjmx 队列相关的
+    # resourmanager.queue_analyse_jmx()
+    if rm1_ha_state == "active" and rm2_ha_state == "standby":
+        ip = rm1_ip
+        port = resourmanager.rm1_port
+        resourmanager.queue_analyse_jmx(ip, port)
+    elif rm1_ha_state == "standby" and rm2_ha_state == "active":
+        ip = rm2_ip
+        port = resourmanager.rm2_port
+        resourmanager.queue_analyse_jmx(ip, port)
+    else:
+        print(
+            "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
         exit(502)
 
 
+"""
+测试用函数 逻辑
+"""
 
+
+def main_one_test():
+    # 对象化
+    resourmanager = ResourceManager()
+
+    # 参数分析
+    resourmanager.arg_analyse()
+
+    # 初始化kerberos
+    if resourmanager.use_kerberos == "true":
+        resourmanager.krb5init()
+
+    # resourcemanager is down
+    # 测试namenode
+    rm1_state = resourmanager.yarn_resourcemanager_is_down(resourmanager.rm1, resourmanager.rm1_port)
+    rm2_state = resourmanager.yarn_resourcemanager_is_down(resourmanager.rm2, resourmanager.rm2_port)
+
+    # 服务状态不正常的情况下打印提醒退出程序，此处可以编辑发送邮件提醒/短信提醒
+    if rm1_state == "down":
+        print("rm1 resourceManager服务疑似 down，请检查！")
+        exit(301)
+
+    if rm2_state == "down":
+        print("rm1 resourceManager服务疑似 down， 请检查！")
+        exit(302)
+
+    # 处理yarn-site.xml文件返回值
+    cluster_name, rm1_ip, rm2_ip = resourmanager.hdfs_site_conf()
+
+    # 检查配置文件信息核对，核对之后调用 namenode_api_info 返回jmx信息值
+    resourmanager.resourceManager_jmx_info_cx(cluster_name, rm1_ip, rm2_ip)
+
+    # 分析jmx指标，打印指标状态
+    # nn_jmx_analyse
+    # nn1 jmx
+    rm1_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn1_jmx)
+    rm2_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn2_jmx)
+
+    if rm1_ha_state == "active" and rm2_ha_state == "standby":
+        jmx_cont = resourmanager.nn1_jmx
+        resourmanager.nn_jmx_analyse(jmx_cont)
+    elif rm1_ha_state == "standby" and rm2_ha_state == "active":
+        jmx_cont = resourmanager.nn2_jmx
+        resourmanager.nn_jmx_analyse(jmx_cont)
+    else:
+        print(
+            "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
+        exit(502)
 
 
 # 主函数
