@@ -10,7 +10,6 @@ warnings.filterwarnings("ignore")
 import os
 import json
 import sys
-import hdfs
 import krbticket
 from xml.etree import ElementTree as ET
 import socket
@@ -63,7 +62,7 @@ class ResourceManager():
         self.AllocatedMB = ""
         self.BASE_DIR = BASE_DIR
         # self.client = ""
-        self.jsonfile_path = self.BASE_DIR + "/conf/yarn/hive.json"
+        self.jsonfile_path = self.BASE_DIR + "/conf/yarn/yarn.json"
         name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport = self._json_parse()
         self.name = name
         self.version = version
@@ -101,6 +100,28 @@ class ResourceManager():
 
         self.AppsPending = ""
         self.AppsFailed = ""
+
+        # 时间戳信息，脚本开始时进行计算
+        # 当前时间： 年月日时分
+        self.datenow = datetime.now()
+        self.datenowstring = self.datenow.strftime("%Y%m%d%H%M%S")
+        # 前一天的当前时间
+        # self.lastdayofnow = self.datenow - timedelta(days=1)
+        # 前一天的当前时刻
+        self.lastdayofnow = self.datenow - timedelta(days=1)
+        # self.lasttmofnow = self.datenow - timedelta(minutes=10)
+        # 当前时间的十分钟前
+        self.lasttmofnow = self.datenow - timedelta(minutes=10)
+
+        # 前一天的当前时间的 年月日时分秒 数字串时间戳
+        self.lastdayofnowstring = self.lastdayofnow.strftime("%Y%m%d%H%M%S")
+
+        # 当前时间的十分钟前的 年月日时分秒 数字串时间戳
+        self.lastdayofnowstring = self.lasttmofnow.strftime("%Y%m%d%H%M%S")
+        # 前一天的年月日
+        self.lastdayofdate = self.lasttmofnow.strftime("%Y%m%d")
+        # print(self.lasttmofnow)
+        # exit(0)
 
         # json配置文件分析
 
@@ -631,6 +652,11 @@ class ResourceManager():
         else:
             print("YARN计算任务延迟")
 
+        """
+        计算需要的参数值
+        （1）提交的App数 
+        （2）AppPending 指标：Pengding作业数量
+        """
         # 指标参数：AppsSubmitted 提交的App数
         AppsSubmitted = bean_json["AvailableVCores"]
         self.AppsSubmitted = AppsSubmitted
@@ -639,13 +665,104 @@ class ResourceManager():
     # （1）YARN任务排队超过10min
     # （11）每天用户提交的作业数
 
+    """
+    指标： YARN任务排队超过10min
+    写json数据文件
+    """
     def job_pendding_tenminitues(self):
-        pass
+        # 获取当前时间戳数字串
+        curtime = self.datenowstring
+        # 获取十分钟前的时间戳字符串
+        tenmago = self.lasttmofnow
+        # Pending状态的作业
+        pendingAppNum = self.AppsPending
+        # 当前时间截止提交的Apps
+        AppSubmitted = self.AppsSubmitted
 
+        # 数据格式 json
+        # {"pendingAppNum":"0","AppSubmitted":"0"}
+        json_str = '{"AppsPending":"%s","AppsSubmitted":"%s"}' % (pendingAppNum, AppSubmitted)
+
+        # 文件名称 20230622184504_crontab_hdfs_capcity.json
+        filename = "%s_crontab_yarn_Apps.json" % curtime
+        path = BASE_DIR + "/cron/yarn/%s" % filename
+
+        # 判断pending状态的作业
+        # 当前为0 直接写入文件
+        if int(pendingAppNum) == 0:
+            with open(path, 'w', encoding="utf-8") as file:
+                file.write(json_str)
+                file.close()
+            # 写入文件数据到当前时间戳文件
+            # 可以选择不打印此处
+            print("YARN任务排队数量: %s ,写入json数据文件到本地" % pendingAppNum)
+        else:
+            # pendding数不为0,读取十分钟前的数据
+            # 前提是文件存在，不存在则为第一次计算，打印当前，不计算，写入当前数据到文件
+            new_file = "%s_crontab_yarn_Apps.json" % tenmago
+            new_filepath = BASE_DIR + "/cron/yarn/%s" % new_file
+
+            if os.path.exists(new_filepath):
+                # 写当天数据到本地，保存数据
+                with open(path, 'w', encoding="utf-8") as file:
+                    file.write(json_str)
+                    file.close()
+
+                # 10分钟前的文件存在，读取十分钟前的文件数据，进行判断，10分钟前的文件
+                with open(new_filepath, 'r', encoding="utf-8") as reader:
+                    file_cont = reader.read()
+                    reader_json = json.loads(file_cont)
+                    AppsPending = reader_json["AppsPending"]
+                    if int(AppsPending) != 0:
+                        print("YARN任务排队超过10min, 当前排队数量: %s " % str(pendingAppNum))
+            else:
+                # 10分钟前的文件不存在，直接写数据到本地
+                with open(new_filepath, 'w', encoding="utf-8") as file:
+                    file.write(json_str)
+                    file.close()
+                print("没有获取到10分钟前的数据文件,YARN任务排队数量: %s ,请注意检查处理" % pendingAppNum)
+
+
+    # 取文件，年月日时分所在文件
+    """
+    指标：每天用户提交的作业数
+    """
     def job_submitted_calculate(self):
-        pass
+        # 获取当前时间戳数字串
+        curtime = self.datenowstring
+        # 获取十分钟前的时间戳字符串
+        ondaygo = self.lasttmofnow
+        # Pending状态的作业
+        pendingAppNum = self.AppsPending
+        # 当前时间截止提交的Apps
+        AppSubmitted = self.AppsSubmitted
+
+        # 数据格式 json
+        # {"pendingAppNum":"0","AppSubmitted":"0"}
+        json_str = '{"AppsPending":"%s","AppsSubmitted":"%s"}' % (pendingAppNum, AppSubmitted)
+
+        # 文件名称 20230622184504_crontab_hdfs_capcity.json
+        filename = "%s_crontab_yarn_Apps.json" % curtime
+        path = BASE_DIR + "/cron/yarn/%s" % filename
+        lastday_filename = self.lastdayofnowstring
+        lastday_filename_path = BASE_DIR + lastday_filename
+
+        # 判断24小时前的文件存不存在，存在读取文件计算；不存在则打印当前已提交的作业总数
+        if os.path.exists(lastday_filename_path):
+            with open(lastday_filename,'w',encoding="utf-8") as reader:
+                reader_cont = reader.read()
+                reader_cont_json = json.loads(reader_cont)
+                AppSubmitted_lastday = reader_cont_json["AppsSubmitted"]
+
+                # 计算作业数
+                abs_num = int(AppSubmitted_lastday) - int(AppSubmitted)
+                print("每天用户提交的作业数: %s" % str(abs_num))
+        else:
+            print("前一天相同时间 %s 没有记录的数据存在！当前时间 % 已提交作业数：%s" % (str(self.datenow)), str(self.lastdayofnow),AppSubmitted)
 
 
+
+# 主函数逻辑
 def main_one():
     # 对象化
     resourmanager = ResourceManager()
@@ -727,8 +844,16 @@ def main_one():
         exit(502)
 
 
+    # 指标：YARN任务排队超过10min
+    resourmanager.job_pendding_tenminitues()
+
+    # 指标： 每天用户提交的作业数
+    resourmanager.job_submitted_calculate()
+
+
 """
 测试用函数 逻辑
+仅做测试使用
 """
 
 
