@@ -26,7 +26,21 @@ sys.path.append(BASE_DIR)
 class HIVER():
 
     def __init__(self):
-        pass
+        # 是否使用kerberos，其它值无效
+        self.use_crontab = "false"
+        # self.use_crontab = "true"
+        # 当前时间： 年月日时分
+        self.datenow = datetime.now()
+        self.datenowstring = self.datenow.strftime("%Y%m%d%H%M%S")
+        # 前一天的当前时间
+        self.lastdayofnow = self.datenow - timedelta(days=1)
+        self.lastdayofnowstring = self.lastdayofnow.strftime("%Y%m%d%H%M%S")
+        # 前一天的年月日
+        self.lastdayofdate = self.lastdayofnow.strftime("%Y%m%d")
+
+        self.curday_cap = ""
+        self.ssh_user = ssh_user
+        self.ssh_pkey = ssh_pkey
 
     # hive配置文件参数分析
     def _json_parse(self):
@@ -71,6 +85,19 @@ class HIVER():
             return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport
 
 
+
+"""
+主函数逻辑
+
+指标需求：
+四、hive
+（1）组件服务的状态（大数据端口探活告警）
+（2）Hive metastore的GC时间
+（3）Hive metastore的内存使用
+（4）Hive server2的内存使用
+（5）Hiveserver2的GC时间
+（6）Hvieserver2的连接客户端数量
+"""
 def main_one():
     pass
 
