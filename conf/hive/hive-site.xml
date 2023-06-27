@@ -1,0 +1,207 @@
+<configuration>
+<!-- atlas hook -->
+<!--监听Hive Client执行 采集血缘-->
+<property>
+    <name>hive.exec.post.hooks</name>
+    <value>org.apache.atlas.hive.hook.HiveHook</value>
+</property>
+<!--监听Hive MetaStore变更，采集技术元数据-->
+<property>
+    <name>hive.metastore.event.listeners</name>
+    <value>org.apache.atlas.hive.hook.HiveMetastoreHook</value>
+</property>
+  <property>
+    <name>mapreduce.input.fileinputformat.input.dir.recursive</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>hive.mapred.supports.subdirectories</name>
+    <value>true</value>
+  </property>
+
+<property>
+    <name>hive.metastore.warehouse.dir</name>
+    <value>/user/hive/warehouse</value>
+  </property>
+
+  <property>
+    <name>hive.support.sql11.reserved.keywords</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>javax.jdo.option.ConnectionURL</name>
+    <value>jdbc:mysql://10.0.0.41:3306/hive_meta?characterEncoding=utf8&amp;createDatabaseIfNotExist=true</value>
+  </property>
+
+  <property>
+    <name>javax.jdo.option.ConnectionDriverName</name>
+    <value>com.mysql.jdbc.Driver</value>
+  </property>
+
+  <property>
+    <name>javax.jdo.option.ConnectionUserName</name>
+    <value>root</value>
+  </property>
+
+  <property>
+    <name>javax.jdo.option.ConnectionPassword</name>
+    <value>0gvzJr66iNs5</value>
+  </property>
+
+  <property>
+    <name>hive.security.authorization.task.factory</name>
+    <value>org.apache.hadoop.hive.ql.parse.authorization.HiveAuthorizationTaskFactoryImpl</value>
+  </property>
+
+  <property>
+    <name>hive.server2.logging.operation.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>hive.metastore.schema.verification</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <name>datanucleus.schema.autoCreateTables</name>
+    <value>true</value>
+  </property>
+<property>
+<name>hive.metastore.uris</name>
+<value>thrift://ocean-bigdata-1a-21:9083,thrift://ocean-bigdata-1a-20:9083,thrift://ocean-bigdata-1a-22:9083</value>
+</property>
+<!--
+  <property>
+    <name>hive.sentry.conf.url</name>
+    <value>file:///export/common/hive/conf/sentry-site.xml</value>
+  </property>
+
+  <property>
+    <name>hive.stats.collect.scancols</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>hive.users.in.admin.role</name>
+    <value>hdfs</value>
+  </property>
+
+  <property>
+    <name>hive.metastore.pre.event.listeners</name>
+    <value>org.apache.sentry.binding.metastore.MetastoreAuthzBinding</value>
+  </property>
+  <property>
+    <name>hive.metastore.event.listeners</name>
+    <value>org.apache.sentry.binding.metastore.SentrySyncHMSNotificationsPostEventListener</value>
+  </property>
+
+  <property>
+    <name>hive.server2.session.hook</name>
+    <value>org.apache.sentry.binding.hive.HiveAuthzBindingSessionHook</value>
+  </property>
+  <property>
+    <name>hive.security.authorization.task.factory</name>
+    <value>org.apache.sentry.binding.hive.SentryHiveAuthorizationTaskFactoryImpl</value>
+  </property>
+-->
+
+<property>
+    <name>hive.server2.authentication</name>
+    <value>KERBEROS</value>
+</property>
+
+<property>
+    <name>hive.server2.authentication.kerberos.principal</name>
+    <value>hive/_HOST@JD.COM</value>
+</property>
+
+<property>
+    <name>hive.server2.authentication.kerberos.keytab</name>
+    <value>/export/common/hive/conf/hive.keytab</value>
+</property>
+ 
+<property>
+    <name>hive.server2.thrift.sasl.qop</name>
+    <value>auth-conf</value>
+    <description>Sasl QOP value; one of 'auth', 'auth-int' and 'auth-conf'</description>
+</property>
+<property>
+    <name>hive.metastore.sasl.enabled</name>
+     <value>true</value>
+</property>
+
+<property>
+    <name>hive.metastore.kerberos.keytab.file</name>
+    <value>/export/common/hive/conf/hive.keytab</value>
+</property>
+
+<property>
+    <name>hive.metastore.kerberos.principal</name>
+    <value>hive/_HOST@JD.COM</value>
+</property>
+
+<!-- Hive on Spark -->
+<property>
+  <name>spark.yarn.jars</name>
+  <value>/spark_dir/spark_jars/*</value>
+</property>
+<!--Hive和spark连接超时时间-->
+<property>
+    <name>hive.spark.client.connect.timeout</name>
+    <value>300000ms</value>
+</property>
+<!-- 修复tez insert问题 -->
+<property>
+  <name>hive.stats.autogather</name>
+  <value>false</value>
+</property>
+<!-- 资源管理添加权限控制 -->
+<property>  
+  <name>hive.security.authorization.enabled</name>   
+  <value>true</value>  
+  <description>Enable or disable the hive client authorization</description>  
+</property>
+<property>
+   <name>hive.metastore.execute.setugi</name>
+   <value>true</value>
+</property>
+<property>
+   <name>hive.metastore.authorization.storage.checks</name>
+   <value>false</value>
+   <final>false</final>
+</property>
+<property>
+   <name>hive.users.in.admin.role</name>
+   <value>hive</value>
+</property>
+<property>
+    <name>hive.security.authorization.manager</name>
+ <value>org.apache.hadoop.hive.ql.security.authorization.DefaultHiveAuthorizationProvider</value>
+</property>
+<property>
+    <name>hive.security.authenticator.manager</name>
+    <value>org.apache.hadoop.hive.ql.security.HadoopDefaultAuthenticator</value>
+</property>
+<property>
+    <name>hive.security.metastore.authenticator.manager</name>
+    <value>org.apache.hadoop.hive.ql.security.HadoopDefaultMetastoreAuthenticator</value>
+</property>
+
+
+<!-- 开启 metrix -->
+    <!-- 检查以下配置项存在与否 -->
+<property>
+    <name>hive.metastore.metrics.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.metastore.metrics.enabled</name>
+    <value>hive.server2.metrics.enabled</value>
+</property>
+
+
+</configuration>

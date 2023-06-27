@@ -1,0 +1,211 @@
+{
+  "beans" : [ {
+    "name" : "metrics:name=buffers.mapped.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=exec_async_pool_size",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 1
+  }, {
+    "name" : "metrics:name=threads.blocked.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=memory.non-heap.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : -6.7740304E7
+  }, {
+    "name" : "metrics:name=gc.PS-Scavenge.time",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 53
+  }, {
+    "name" : "metrics:name=memory.non-heap.init",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2555904
+  }, {
+    "name" : "metrics:name=memory.pools.Code-Cache.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.04321619669596354
+  }, {
+    "name" : "metrics:name=buffers.direct.used",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 115215
+  }, {
+    "name" : "metrics:name=memory.total.committed",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2127257600
+  }, {
+    "name" : "metrics:name=buffers.mapped.capacity",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=memory.heap.max",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2058354688
+  }, {
+    "name" : "metrics:name=hs2_avg_open_session_time",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : NaN
+  }, {
+    "name" : "metrics:name=qc_max_size",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2147483648
+  }, {
+    "name" : "metrics:name=threads.timed_waiting.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 13
+  }, {
+    "name" : "metrics:name=memory.heap.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.24995764384024372
+  }, {
+    "name" : "metrics:name=memory.non-heap.max",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : -1
+  }, {
+    "name" : "metrics:name=threads.runnable.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 10
+  }, {
+    "name" : "metrics:name=exec_async_queue_size",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=memory.pools.PS-Eden-Space.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.8385399199695122
+  }, {
+    "name" : "metrics:name=memory.non-heap.used",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 67740304
+  }, {
+    "name" : "metrics:name=gc.PS-MarkSweep.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2
+  }, {
+    "name" : "metrics:name=buffers.mapped.used",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=gc.PS-Scavenge.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2
+  }, {
+    "name" : "metrics:name=jvm.pause.extraSleepTime",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxCounter",
+    "Count" : 5233
+  }, {
+    "name" : "metrics:name=threads.new.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=buffers.direct.capacity",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 115215
+  }, {
+    "name" : "metrics:name=memory.heap.used",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 514501488
+  }, {
+    "name" : "metrics:name=memory.total.init",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2150039552
+  }, {
+    "name" : "metrics:name=memory.pools.Metaspace.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.9834274366707472
+  }, {
+    "name" : "metrics:name=qc_current_size",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=memory.pools.PS-Old-Gen.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.04461013978324675
+  }, {
+    "name" : "metrics:name=memory.pools.Compressed-Class-Space.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.005458064377307892
+  }, {
+    "name" : "metrics:name=threads.daemon.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 20
+  }, {
+    "name" : "metrics:name=memory.total.max",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2058354687
+  }, {
+    "name" : "metrics:name=threads.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 26
+  }, {
+    "name" : "metrics:name=threads.deadlock.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=hs2_active_sessions",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=memory.heap.init",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2147483648
+  }, {
+    "name" : "metrics:name=jvm.pause.info-threshold",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxCounter",
+    "Count" : 2
+  }, {
+    "name" : "metrics:name=threads.deadlocks",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : "[]"
+  }, {
+    "name" : "metrics:name=threads.terminated.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=hs2_open_sessions",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=buffers.direct.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 13
+  }, {
+    "name" : "metrics:name=memory.total.used",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 582241792
+  }, {
+    "name" : "metrics:name=memory.non-heap.committed",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 68902912
+  }, {
+    "name" : "metrics:name=hs2_avg_active_session_time",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : NaN
+  }, {
+    "name" : "metrics:name=classLoading.loaded",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 8104
+  }, {
+    "name" : "metrics:name=memory.pools.PS-Survivor-Space.usage",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0.0
+  }, {
+    "name" : "metrics:name=threads.waiting.count",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 3
+  }, {
+    "name" : "metrics:name=classLoading.unloaded",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 0
+  }, {
+    "name" : "metrics:name=memory.heap.committed",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 2058354688
+  }, {
+    "name" : "metrics:name=gc.PS-MarkSweep.time",
+    "modelerType" : "com.codahale.metrics.JmxReporter$JmxGauge",
+    "Value" : 286
+  } ]
+}

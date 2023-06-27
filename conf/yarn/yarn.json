@@ -8,7 +8,7 @@
       "user": "hdfs",
       "num": "4",
       "second": "5",
-      "hdfsconf": "yarn-site.xml",
+      "yarnconf": "yarn-site.xml",
       "ssh_user": "root",
       "ssh_pkey": "/root/.ssh/id_rsa"
     },

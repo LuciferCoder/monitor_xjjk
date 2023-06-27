@@ -53,6 +53,7 @@ from conf import Logger as Logger
 class ResourceManager():
     # init 初始化内部变量,初始化内部参数
     def __init__(self):
+        self.use_crontab = None
         self.AppsSubmitted = ""
         self.AvailableMB = ""
         self.AvailableVCores = ""
@@ -63,11 +64,12 @@ class ResourceManager():
         self.BASE_DIR = BASE_DIR
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/yarn/yarn.json"
-        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport = self._json_parse()
+        name, version, cluster_name, yarnconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
-        self.hdfsconf = hdfsconf
+        self.yarnconf = yarnconf
+        # self.hdfsconf = yarnconf
         self.krb5conf = krb5conf
         self.client_keytab = client_keytab
         self.client_keytab_principle = client_keytab_principle
@@ -83,7 +85,7 @@ class ResourceManager():
         self.ssh_pkey = ssh_pkey
         self.nodemanagerJmxport = nodemanagerJmxport
 
-        self.yarn_site_filepath = self.BASE_DIR + "/conf/yarn/yarn-site.xml"
+        self.yarn_site_filepath = self.BASE_DIR + "/conf/yarn/%s" % self.yarnconf
         self.yarnsite_clustername = ""
         self.nodemanager_alive_num_from_jmx = ""
 
@@ -138,7 +140,7 @@ class ResourceManager():
             cluster_name = load_dict["dependencies"]["config"]["cluster_name"]
 
             # hdfs-site.xml
-            hdfsconf = load_dict["dependencies"]["config"]["hdfsconf"]
+            hdfsconf = load_dict["dependencies"]["config"]["yarnconf"]
 
             # 集群是否使用了kerberos
             use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
@@ -170,7 +172,7 @@ class ResourceManager():
 
     # yarn-site.xml文件处理，返回参数
     # 逻辑中尚未用到
-    def hdfs_site_conf(self):
+    def yarn_site_conf(self):
         try:
             # hdfs_site_file = self.hdfs_site_file
             filepath = self.yarn_site_filepath
@@ -679,13 +681,25 @@ class ResourceManager():
         # 当前时间截止提交的Apps
         AppSubmitted = self.AppsSubmitted
 
+        # 判断运行方式
+        use_crontab = self.use_crontab
+
         # 数据格式 json
         # {"pendingAppNum":"0","AppSubmitted":"0"}
         json_str = '{"AppsPending":"%s","AppsSubmitted":"%s"}' % (pendingAppNum, AppSubmitted)
 
+
+        # 定时任务数据写入定开
+        # if use_crontab == "true":
+        #     # 写入文件全部指标数据的字符串
+        #     json_str = '{"AppsPending":"%s","AppsSubmitted":"%s"，"":"%s}' % (pendingAppNum, AppSubmitted)
+
+
         # 文件名称 20230622184504_crontab_hdfs_capcity.json
         filename = "%s_crontab_yarn_Apps.json" % curtime
         path = BASE_DIR + "/cron/yarn/%s" % filename
+
+
 
         # 判断pending状态的作业
         # 当前为0 直接写入文件

@@ -8,7 +8,7 @@
       "user": "hdfs",
       "num": "4",
       "second": "5",
-      "hdfsconf": "yarn-site.xml",
+      "hivesconf": "hive-site.xml",
       "ssh_user": "root",
       "ssh_pkey": "/root/.ssh/id_rsa"
     },
@@ -19,13 +19,33 @@
     },
     "hivenodes": {
       "hiveserver2": {
-        "hiveserverNodes": [{"hostname": "","ip": ""},{"hostname": "","ip": ""}],
-        "hiveserverPort": "50470"
+        "hiveserverNodes": [
+          {"hostname": "ocean-bigdata-1a-21","ip": "10.0.0.47"},
+          {"hostname": "ocean-bigdata-1a-22","ip": "10.0.0.42"},
+          {"hostname": "ocean-bigdata-1a-20","ip": "10.0.0.45"}
+        ],
+        "hiveserverPort": "10002"
       },
       "metastore": {
-        "metastoreNodes": [{"hostname": "","ip": ""},{"hostname": "","ip": ""}],
-        "metastorePort": "50470"
+        "metastoreNodes": [
+          {"hostname": "ocean-bigdata-1a-21","ip": "10.0.0.47"},
+          {"hostname": "ocean-bigdata-1a-22","ip": "10.0.0.42"},
+          {"hostname": "ocean-bigdata-1a-20","ip": "10.0.0.45"}
+        ],
+        "metastorePort": "9083"
       }
     }
   }
 }
+
+
+<!-- 开启 metrix -->
+<property>
+    <name>hive.metastore.metrics.enabled</name>
+    <value>true</value>
+</property>
+
+<property>
+    <name>hive.metastore.metrics.enabled</name>
+    <value>hive.server2.metrics.enabled</value>
+</property>
