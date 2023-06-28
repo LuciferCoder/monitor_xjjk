@@ -141,7 +141,7 @@ class HIVER():
         krbconf = self.krb5conf
         keytab_file = self.client_keytab
         principle = self.client_keytab_principle
-        os.environ['KRB5CCNAME'] = os.path.join(os.path.dirname(self.jsonfile_path), f'keytab/krb5cc_%s' % (self.name))
+        os.environ['KRB5CCNAME'] = os.path.join(self.BASE_DIR, f'keytab/krb5cc_%s' % (self.name))
         kconfig = krbticket.KrbConfig(principal=principle, keytab=keytab_file)
         krbticket.KrbCommand.kinit(kconfig)
         # cont = krbticket.KrbTicket.get(keytab=keytab_file,principal=principle)

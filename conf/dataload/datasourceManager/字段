@@ -1,0 +1,31 @@
+date			                    日期
+time			                    时间
+bigdata_component			        大数据组件名称
+component_service			        组件服务名称
+hdfs_usage			                hdfs使用率
+ip			                        IP
+hostname			                主机名
+heap_usage			                堆内存使用率
+component_service_status	    	服务存活
+hdfs_added		                	HDFS日增数据量
+namenode_ha_status	        		Namenode HA的状态
+hdfs_healthy		            	hdfs_健康检查（1/-1）(健康、不健康)
+alive_nodes			                存活节点数
+dead_nodes		                	集群节点数(Dead Nodes )
+volume_failure	            		集群DN节点磁盘
+gctime		                    	GCTIME
+client_num		                	Hvieserver2的连接客户端数量
+rm_core_total	            		yarn内核总数
+rm_core_used	            		yarn内核使用
+rm_core_avalable	        		yarn内核可用（剩余）
+rm_mem_total	            		yarn内存总数
+rm_mem_use		                	yarn内存使用
+rm_mem_available        			yarn内存可用（剩余）
+Apprunning		                	正在运行的作业数量
+AppFailed		                	失败作业数
+AppSubmitted	            		提交的作业数总数
+AppSubmitted_perday	        		每天用户提交的作业数
+AppPending			                Pengding作业数量
+NodeManager_healthy		        	YARNNodeManager不健康，请检查磁盘空间使用率是否超过90%
+yarn_nospace			            YARN上没有足够可分配的资源
+Apppending_longten		        	YARN任务排队超过10min
