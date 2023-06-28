@@ -24,9 +24,9 @@ sys.path.append(BASE_DIR)
 
 
 class HIVER():
-
     def __init__(self):
         self.BASE_DIR = BASE_DIR
+        self.jsonfile_path = self.BASE_DIR + "/conf/hive/hive.json"
         name, version, cluster_name, hiveconf, krb5conf, client_keytab, \
             client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
             hiveserver2_node_list, hiveserver2_node_port, \
@@ -43,9 +43,9 @@ class HIVER():
         self.metastore_node_list = metastore_node_list
         self.metastore_node_port = metastore_node_port
 
-        self.jsonfile_path = self.BASE_DIR + "/conf/%s/hive.json" % self.name
+        # self.hiveconf = hiveconf
 
-        self.hiveconf_path = os.path.dirname(self.jsonfile_path) + "/" + self.hiveconf
+        self.hiveconf_path = os.path.dirname(self.jsonfile_path) + "/" + self.hiveconfname
         # hdfs_nodes数量，来自于健康检查返回的节点数
         self.hdfs_node_count = 0
         self.use_kerberos = use_kerberos
@@ -82,6 +82,7 @@ class HIVER():
 
     # hive配置文件参数分析
     def _json_parse(self):
+        # print(self.jsonfile_path)
         with open(self.jsonfile_path, 'r') as jsonfile:
             load_dict = json.load(jsonfile)
 
@@ -92,7 +93,7 @@ class HIVER():
             cluster_name = load_dict["dependencies"]["config"]["cluster_name"]
 
             # hive-site.xml
-            hiveconf = load_dict["dependencies"]["config"]["hiveconf"]
+            hiveconf = load_dict["dependencies"]["config"]["hivesconf"]
 
             # 集群是否使用了kerberos
             use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
@@ -113,11 +114,11 @@ class HIVER():
 
             ##hive metastore node list
             metastore_node_list = load_dict["dependencies"]["hivenodes"]["metastore"]["metastoreNodes"]
-            metastore_node_list = load_dict["dependencies"]["hivenodes"]["metastore"]["metastorePort"]
+            metastore_node_port = load_dict["dependencies"]["hivenodes"]["metastore"]["metastorePort"]
 
             return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
                 use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-                metastore_node_list, metastore_node_list
+                metastore_node_list, metastore_node_port
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -166,7 +167,8 @@ class HIVER():
         hiverserver2_port = self.hiveserver2_node_port
         hiveserver2nodeslist = self.hiveserver2_node_list
         for hiverservernode in hiveserver2nodeslist:
-            hivenode_json = json.loads(hiverservernode)
+            # hivenode_json = json.loads(hiverservernode)
+            hivenode_json = hiverservernode
             ip = hivenode_json["ip"]
             hostname = hivenode_json["hostname"]
             node_is_alived = self.socket_check(ip=ip, port=hiverserver2_port)
@@ -178,7 +180,8 @@ class HIVER():
         metastore_port = self.metastore_node_port
         hive_metastore_list = self.metastore_node_list
         for hivemetastore in hive_metastore_list:
-            hivemetastore_json = json.loads(hivemetastore)
+            # hivemetastore_json = json.loads(hivemetastore)
+            hivemetastore_json = hivemetastore
             ip = hivemetastore_json["ip"]
             hostname = hivemetastore_json["hostname"]
             node_is_alived = self.socket_check(ip=ip, port=metastore_port)
@@ -198,7 +201,8 @@ class HIVER():
         metastore_node_isalived_list = self.metastore_node_isalived_list
 
         for node in hivesevrer2_node_isalived_list:
-            node_json = json = json.loads(node)
+            # node_json = json.loads(node)
+            node_json = json.loads(node)
             isalived = node_json["alived"]
             if isalived == "true":
                 pass
@@ -208,7 +212,7 @@ class HIVER():
                 print("主机 %s, IP %s 上的服务 HiveServer2 服务 Down" % (hostname, ip))
 
         for node in metastore_node_isalived_list:
-            node_json = json = json.loads(node)
+            node_json = json.loads(node)
             isalived = node_json["alived"]
             if isalived == "true":
                 pass
@@ -271,13 +275,17 @@ class HIVER():
             hostname = node_json["hostname"]
             gctimevalue = ""
             heapusage = ""
-            urlcmd = "curl http://%:%s/mx?qry=metrics:*" % (ip, hivesevrer2_port)
+            urlcmd = "curl -s http://%s:%s/jmx?qry=metrics:*" % (ip, hivesevrer2_port)
+            # print(urlcmd)
             result = os.popen(urlcmd)
-            result_json = json.loads(result)
+            result_cont = result.read()
+            # print(result_cont)
+            result_json = json.loads(result_cont)
             beans = result_json["beans"]
             threadnum = 0
             for bean in beans:
-                bean_json = json.loads(bean)
+                # bean_json = json.loads(bean)
+                bean_json = bean
                 name = bean_json["name"]
                 if name == "metrics:name=gc.PS-MarkSweep.time":
                     gctimevalue = bean_json["Value"]
@@ -287,9 +295,11 @@ class HIVER():
                     threadnum = bean_json["Value"]
                     # threadnum_list.append()
 
+            heapusage = '{:.2%}'.format(heapusage)
             json_str = '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}' \
                        % (hostname, ip, gctimevalue, heapusage)
             hiveserverNode_jmx_result.append(json_str)
+            # usage = '{:.2%}'.format(float(used) / float(int(MaxHeapSize)))
 
             # 客户端连接数
             json_nu_str = '{"hostname":"%s", "ip":"%s", "threadnum":"%s"}' \
@@ -306,36 +316,46 @@ class HIVER():
             gctimevalue = ""
             heapusage = ""
 
-            port = self.metastore_node_port
+            port = 22
             user = self.ssh_user
             password = ""
             use_pwd = "false"
             ssh_keyfile = self.ssh_pkey
 
-            cmd = " ps -ef |grep hive.metastore.HiveMetaStore|grep -v grep|awk '{print $2}'"
+            cmd = "ps -ef |grep hive.metastore.HiveMetaStore|grep -v grep|awk '{print $2}'"
 
             service_pid = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
+            service_pid = service_pid.decode()
 
             cmd = "source /etc/profile;jmap -heap %s" % service_pid
             heap_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
+            heap_cont = heap_cont.decode()
+
+            # print("heap_cont")
+            # print(heap_cont)
             usedlist = []
             MaxHeapSize = ""
-            heap_cont_list = str(heap_cont).split("\\n")
+            heap_cont_list = str(heap_cont).split("\n")
+            # print("heap_cont_list")
+            # print(heap_cont_list)
             for st in heap_cont_list:
                 if "MaxHeapSize" in st:
-                    MaxHeapSize = st.strip().split("")[2]
+                    MaxHeapSize = st.strip().split()[2]
                 if "used" in st:
                     stlist = st.strip().split()
                     if len(stlist) == 4:
-                        used = [stlist[2]]
+                        used = stlist[2]
                         usedlist.append(used)
+            # print("MaxHeapSize")
+            # print(MaxHeapSize)
+            # print(type(MaxHeapSize))
 
             # 计算
             used = 0
             for use in usedlist:
-                used += int(use)
+                used += float(use)
             # 使用率 "{:.2%}".format(curday_cap / 100).replace("%", "GB")
-            usage = '{:.2%}'.format(used / int(MaxHeapSize))
+            usage = '{:.2%}'.format(float(used) / float(int(MaxHeapSize)))
             heapusage = usage
 
             # gc time
@@ -393,13 +413,14 @@ class HIVER():
     # 指标： Hvieserver2的连接客户端数量
     def hiveserver_client_num(self):
         threadnum_list = self.threadnum_list
-        # '{"hostname":"%s", "ip":"%s", "threadnum":"%s"}'
+        # {"hostname":"ocean-bigdata-1a-21", "ip":"10.0.0.47", "threadnum":"26"}
         # metastoreNode_jmx_result = self.metastoreNode_jmx_result
         for node in threadnum_list:
+            # print(node)
             node_json = json.loads(node)
             hostname = node_json["hostname"]
             ip = node_json["ip"]
-            threadnum = node_json["gctimevalue"]
+            threadnum = node_json["threadnum"]
 
             print("主机 %s, IP %s 上的HievServer2服务的客户端连接数：%s" % (hostname, ip, threadnum))
 
@@ -423,6 +444,7 @@ class HIVER():
 
 def main_one():
     hiver = HIVER()
+    # exit(0)
 
     hiver.arg_analyse()
 

@@ -33,6 +33,10 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
+import subprocess
+
+# subprocess.run("ls -alhrt")
+
 """带有Kerberos认证的hdfs认证"""
 """
 1、获取认证Kerberos认证信息进行认证
@@ -48,7 +52,7 @@ with krbContext(using_keytab=True, principal="ocean/ocean@JD.COM", keytab_file="
   cnn=hive.Connection(host='10.0.0.45', port=10000, database='ods', auth="KERBEROS", kerberos_service_name='hive')
   cursor=cnn.cursor()
   stmt="select * from ods_my49_tbnd_a_d"
-  cursor.execute(stmt)
+  cursor.execute(stmt) 
   data=cursor.fetchall()
   cnn.close()
   for result in data:
@@ -189,13 +193,15 @@ class HDFSCHECk():
         try:
             hdfsconfpath = self.hdfsconf_path
             cmd = "hdfs fsck -conf %s /" % hdfsconfpath
-            foo = os.popen(cmd=cmd)
+            # foo = os.popen(cmd=cmd)
+            foo = subprocess.getoutput(cmd)
 
             filename = "/conf/hdfs/%sfsck.log" % self.datenowstring
             file_path = BASE_DIR + filename
 
             with open(file_path, 'w',encoding="utf-8") as file:
-                file.write(foo.read())
+                # file.write(foo.read())
+                file.write(foo)
                 file.close()
 
 
@@ -205,7 +211,7 @@ class HDFSCHECk():
 
                         lin = lin.replace("The filesystem under path ", "").split(" is ")
                         hdfs_path = lin[0]
-                        hdfs_path_state = lin[1]
+                        hdfs_path_state = lin[1].strip()
                         # print(hdfs_path,hdfs_path_state)
                         # hdfs_path_state = "CORRUPT"
                         if hdfs_path_state == "HEALTHY":

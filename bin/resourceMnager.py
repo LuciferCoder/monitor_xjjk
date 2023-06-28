@@ -26,7 +26,7 @@ from datetime import datetime, timedelta
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
-# from EXECUTION.conf import Alarm as Alarm, Logger as Logger
+# from EXECUTION.conf import Alarm as Alarm, Logger as LoggerSS
 # from conf import Alarm as Alarm, Logger as Logger
 from conf import Logger as Logger
 
@@ -53,6 +53,8 @@ from conf import Logger as Logger
 class ResourceManager():
     # init 初始化内部变量,初始化内部参数
     def __init__(self):
+        self.rm1_jmx = None
+        self.rm2_jmx = None
         self.use_crontab = None
         self.AppsSubmitted = ""
         self.AvailableMB = ""
@@ -84,6 +86,7 @@ class ResourceManager():
         self.ssh_user = ssh_user
         self.ssh_pkey = ssh_pkey
         self.nodemanagerJmxport = nodemanagerJmxport
+        self.nodemanager_port = self.nodemanagerJmxport
 
         self.yarn_site_filepath = self.BASE_DIR + "/conf/yarn/%s" % self.yarnconf
         self.yarnsite_clustername = ""
@@ -250,51 +253,55 @@ class ResourceManager():
             s.close()
             return "true"
         except Exception as e:
-            print(e)
+            # print(e)
             return "false"
 
     # 包装远程连接方法，执行命令返回结果
     def ssh_connect(self, ip, port, user, password, use_pwd, ssh_keyfile, cmd):
-        # ssh获取远端服务进程信息
-        ip = ip
-        port = port
-        user = user
-        pwd = "password"
-        ssh_key = ssh_keyfile
-        use_pwd = use_pwd
-        cmd = cmd
+        try:
+            # ssh获取远端服务进程信息
+            ip = ip
+            port = port
+            user = user
+            pwd = "password"
+            ssh_key = ssh_keyfile
+            use_pwd = use_pwd
+            cmd = cmd
 
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        ssh_key = paramiko.RSAKey.from_private_key_file(ssh_key)
+            ssh_key = paramiko.RSAKey.from_private_key_file(ssh_key)
 
-        if use_pwd == "true":
-            pwd = password
-            ssh.connect(ip, port, user, password, timeout=10)
-            stdin, stdout, stderr = ssh.exec_command(cmd)
-            # 输出命令执行结果
-            result = stdout.read()
-            ssh.close()
-            bl = ""
-            if int(result) == 1:
-                bl = "true"
+            if use_pwd == "true":
+                pwd = password
+                ssh.connect(ip, port, user, password, timeout=10)
+                stdin, stdout, stderr = ssh.exec_command(cmd)
+                # 输出命令执行结果
+                result = stdout.read()
+                ssh.close()
+                bl = ""
+                if int(result) == 1:
+                    bl = "true"
+                else:
+                    bl = "false"
+                return bl
             else:
-                bl = "false"
-            return bl
-        else:
-            # 使用密钥连接
-            ssh.connect(hostname=ip, port=port, username=user, pkey=ssh_key)
-            stdin, stdout, stderr = ssh.exec_command(cmd)
-            # 输出命令执行结果
-            result = stdout.read()
-            ssh.close()
-            bl = ""
-            if int(result) == 1:
-                bl = "true"
-            else:
-                bl = "false"
-            return bl
+                # 使用密钥连接
+                ssh.connect(hostname=ip, port=port, username=user, pkey=ssh_key)
+                stdin, stdout, stderr = ssh.exec_command(cmd)
+                # 输出命令执行结果
+                result = stdout.read()
+                ssh.close()
+                bl = ""
+                if int(result) == 1:
+                    bl = "true"
+                else:
+                    bl = "false"
+                return bl
+        except Exception as e:
+            pass
+            # print(e)
 
     # rn HA 状态分析
     def rm_ha_analyse(self, jmx_cont):
@@ -305,7 +312,7 @@ class ResourceManager():
             ha_state = "standby"
             return ha_state
         else:
-            ha_state = "alive"
+            ha_state = "active"
             return ha_state
 
     # 分析参数确定是否手动执行
@@ -343,10 +350,10 @@ class ResourceManager():
         # 服务存在且端口正验证正常视为Namenode正常
         # 理论上要先检查Namenode状态之后进行下一步
         if socket_ck_re == "true" and nn_ssh_result == "true":
-            print("IP: %s 上的NameNode服务状态：Notdown" % yarn_ip)
-            return "alive"
+            print("IP: %s 上的RreourceManager服务状态：Notdown" % yarn_ip)
+            return "active"
         else:
-            print("IP: %s 上的NameNode服务状态：Down" % yarn_ip)
+            print("IP: %s 上的RreourceManager服务状态：Down" % yarn_ip)
             return "down"
 
     # namenode jmx接口信息分析处理，获取其他信息的重要函数步骤
@@ -389,8 +396,8 @@ class ResourceManager():
         jsoncont_all_cont1, jsoncont_all_cont2 = self.resourceManager_api_info(nn1_clustername_from_hdfssite,
                                                                                nn2_clustername_from_hdfssite)
 
-        self.nn1_jmx = jsoncont_all_cont1
-        self.nn2_jmx = jsoncont_all_cont2
+        self.rm1_jmx = jsoncont_all_cont1
+        self.rm2_jmx = jsoncont_all_cont2
 
     # 获取nn接口信息,rm1,rm2都需要获取完成的jmx信息
     # def namenode_api_info(self, nn1_clustername_from_hdfssite, nn2_clustername_from_hdfssite):
@@ -408,7 +415,7 @@ class ResourceManager():
         # nn1 socket check, return boolean,true-->联通，false-->不连通
         connected_nn1 = self.socket_check(rm1_ip, rm1_port)
         if connected_nn1 == "true":
-            cmd = "curl -s   https://%s:%s/jmx" % (rm1_ip, rm1_port)
+            cmd = "curl -s   http://%s:%s/jmx" % (rm1_ip, rm1_port)
             jsoncont_all = os.popen(cmd=cmd)
             jsoncont_all_cont1 = jsoncont_all.read()
         else:
@@ -418,7 +425,7 @@ class ResourceManager():
 
         connected_nn2 = self.socket_check(rm2_ip, rm2_port)
         if connected_nn2 == "true":
-            cmd = "curl -s  https://%s:%s/jmx" % (rm2_ip, rm2_port)
+            cmd = "curl -s  http://%s:%s/jmx" % (rm2_ip, rm2_port)
             jsoncont_all = os.popen(cmd=cmd)
             jsoncont_all_cont2 = jsoncont_all.read()
         else:
@@ -457,8 +464,10 @@ class ResourceManager():
             """
             if dic["name"] == "Hadoop:service=ResourceManager,name=RMNMInfo":
                 LiveNodeManagers = dic["LiveNodeManagers"]
+                # print("LiveNodeManagers LiveNodeManagers "+str(type(LiveNodeManagers)))
                 # 返回列表
-                self.LiveNodeManagers = LiveNodeManagers
+                livenodes = json.loads(LiveNodeManagers)
+                self.LiveNodeManagers = livenodes
 
             """
             NumUnhealthyNMs
@@ -485,10 +494,24 @@ class ResourceManager():
             hostname_list = self.nodemanager_list
 
             hostname_jmx_list = []
-
+            """
+            {"HostName":"ocean-bigdata-1a-23",
+            "Rack":"/default",
+            "State":"RUNNING",
+            "NodeId":"ocean-bigdata-1a-23:65033",
+            "NodeHTTPAddress":"ocean-bigdata-1a-23:8042",
+            "LastHealthUpdate":1687932945367,
+            "HealthReport":"",
+            "NodeManagerVersion":"3.2.2",
+            "NumContainers":0,x`
+            "UsedMemoryMB":0,
+            "AvailableMemoryMB":10240}
+            """
             for hostnamejmx in self.LiveNodeManagers:
                 hostname_jmx = hostnamejmx["HostName"]
-                hostname_jmx_list.append()
+                hostname_jmx_list.append(hostname_jmx)
+
+            # print("hostname_jmx_list : " + hostname_jmx_list)
 
             down_ip_host_list = []
             alive_ip_host_list = []
@@ -579,12 +602,14 @@ class ResourceManager():
     def queue_analyse_jmx(self, rmip, rmport):
         ip = rmip
         port = rmport
-        cmd = "http://%s:%s/jmx?qry=Hadoop:service=ResourceManager,name=QueueMetrics,q0=root"
-        bens = os.popen(cmd=cmd)
-        beans_json - json.loads(bens)
+        cmd = "curl -s http://%s:%s/jmx?qry=Hadoop:service=ResourceManager,name=QueueMetrics,q0=root" % (ip, port)
+        beans = os.popen(cmd=cmd)
+        beans_cont = beans.read()
+        beans_json = json.loads(beans_cont)
         bean = beans_json["beans"][0]
-        bean_json = json.loads(bean)
+        # bean_json = json.loads(bean)
 
+        bean_json = bean
         # 指标：Pengding作业数量
         AppsPending = bean_json["AppsPending"]
         self.AppsPending = AppsPending
@@ -610,7 +635,9 @@ class ResourceManager():
 
         # AllocatedMB 使用中的内存资源
         # AllocatedMB = bean_json["AllocatedMB"]
-        self.AllocatedMB = self.FairShareMB - self.AllocatedMB
+        # 2023年6月28日15:14:37 计算类型转换
+        # 已使用的内存资源
+        self.AllocatedMB = int(self.FairShareMB) - int(self.AvailableMB)
 
         # 所有内核数
         FairShareVCores = bean_json["FairShareVCores"]
@@ -622,7 +649,7 @@ class ResourceManager():
 
         # 使用中的内核数
         # AllocatedVCores = bean_json["AllocatedVCores"]
-        self.AllocatedVCores = self.FairShareVCores - self.AvailableVCores
+        self.AllocatedVCores = int(self.FairShareVCores) - int(self.AvailableVCores)
 
         # 指标：资源使用情况
         print("资源使用情况: \r\n    已使用核数：%s 未使用核数：%s ; 已使用内存: %sMB  剩余内存资源: %sMB" %
@@ -671,6 +698,7 @@ class ResourceManager():
     指标： YARN任务排队超过10min
     写json数据文件
     """
+
     def job_pendding_tenminitues(self):
         # 获取当前时间戳数字串
         curtime = self.datenowstring
@@ -688,18 +716,14 @@ class ResourceManager():
         # {"pendingAppNum":"0","AppSubmitted":"0"}
         json_str = '{"AppsPending":"%s","AppsSubmitted":"%s"}' % (pendingAppNum, AppSubmitted)
 
-
         # 定时任务数据写入定开
         # if use_crontab == "true":
         #     # 写入文件全部指标数据的字符串
         #     json_str = '{"AppsPending":"%s","AppsSubmitted":"%s"，"":"%s}' % (pendingAppNum, AppSubmitted)
 
-
         # 文件名称 20230622184504_crontab_hdfs_capcity.json
         filename = "%s_crontab_yarn_Apps.json" % curtime
         path = BASE_DIR + "/cron/yarn/%s" % filename
-
-
 
         # 判断pending状态的作业
         # 当前为0 直接写入文件
@@ -736,11 +760,11 @@ class ResourceManager():
                     file.close()
                 print("没有获取到10分钟前的数据文件,YARN任务排队数量: %s ,请注意检查处理" % pendingAppNum)
 
-
     # 取文件，年月日时分所在文件
     """
     指标：每天用户提交的作业数
     """
+
     def job_submitted_calculate(self):
         # 获取当前时间戳数字串
         curtime = self.datenowstring
@@ -763,7 +787,7 @@ class ResourceManager():
 
         # 判断24小时前的文件存不存在，存在读取文件计算；不存在则打印当前已提交的作业总数
         if os.path.exists(lastday_filename_path):
-            with open(lastday_filename,'w',encoding="utf-8") as reader:
+            with open(lastday_filename, 'w', encoding="utf-8") as reader:
                 reader_cont = reader.read()
                 reader_cont_json = json.loads(reader_cont)
                 AppSubmitted_lastday = reader_cont_json["AppsSubmitted"]
@@ -772,8 +796,8 @@ class ResourceManager():
                 abs_num = int(AppSubmitted_lastday) - int(AppSubmitted)
                 print("每天用户提交的作业数: %s" % str(abs_num))
         else:
-            print("前一天相同时间 %s 没有记录的数据存在！当前时间 % 已提交作业数：%s" % (str(self.datenow)), str(self.lastdayofnow),AppSubmitted)
-
+            print("前一天相同时间 %s 没有记录的数据存在！当前时间 %s 已提交作业数：%s" % (
+            str(self.datenow), str(self.lastdayofnow), AppSubmitted))
 
 
 # 主函数逻辑
@@ -803,7 +827,8 @@ def main_one():
         exit(302)
 
     # 处理yarn-site.xml文件返回值
-    cluster_name, rm1_ip, rm2_ip = resourmanager.hdfs_site_conf()
+    # cluster_name, rm1_ip, rm2_ip = resourmanager.hdfs_site_conf()
+    cluster_name, rm1_ip, rm2_ip = resourmanager.yarn_site_conf()
 
     # 检查配置文件信息核对，核对之后调用 namenode_api_info 返回jmx信息值
     resourmanager.resourceManager_jmx_info_cx(cluster_name, rm1_ip, rm2_ip)
@@ -811,18 +836,19 @@ def main_one():
     # 分析jmx指标，打印指标状态
     # nn_jmx_analyse
     # nn1 jmx
-    rm1_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn1_jmx)
-    rm2_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn2_jmx)
+    rm1_ha_state = resourmanager.rm_ha_analyse(resourmanager.rm1_jmx)
+    rm2_ha_state = resourmanager.rm_ha_analyse(resourmanager.rm2_jmx)
 
     if rm1_ha_state == "active" and rm2_ha_state == "standby":
-        jmx_cont = resourmanager.nn1_jmx
+        jmx_cont = resourmanager.rm1_jmx
         resourmanager.nn_jmx_analyse(jmx_cont)
     elif rm1_ha_state == "standby" and rm2_ha_state == "active":
-        jmx_cont = resourmanager.nn2_jmx
+        jmx_cont = resourmanager.rm2_jmx
         resourmanager.nn_jmx_analyse(jmx_cont)
     else:
         print(
-            "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
+            "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！" % (
+            rm1_ha_state, rm2_ha_state))
         exit(502)
 
     # 指标：nodemanager is down（完成）
@@ -857,67 +883,11 @@ def main_one():
             "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
         exit(502)
 
-
     # 指标：YARN任务排队超过10min
     resourmanager.job_pendding_tenminitues()
 
     # 指标： 每天用户提交的作业数
     resourmanager.job_submitted_calculate()
-
-
-"""
-测试用函数 逻辑
-仅做测试使用
-"""
-
-
-def main_one_test():
-    # 对象化
-    resourmanager = ResourceManager()
-
-    # 参数分析
-    resourmanager.arg_analyse()
-
-    # 初始化kerberos
-    if resourmanager.use_kerberos == "true":
-        resourmanager.krb5init()
-
-    # resourcemanager is down
-    # 测试namenode
-    rm1_state = resourmanager.yarn_resourcemanager_is_down(resourmanager.rm1, resourmanager.rm1_port)
-    rm2_state = resourmanager.yarn_resourcemanager_is_down(resourmanager.rm2, resourmanager.rm2_port)
-
-    # 服务状态不正常的情况下打印提醒退出程序，此处可以编辑发送邮件提醒/短信提醒
-    if rm1_state == "down":
-        print("rm1 resourceManager服务疑似 down，请检查！")
-        exit(301)
-
-    if rm2_state == "down":
-        print("rm1 resourceManager服务疑似 down， 请检查！")
-        exit(302)
-
-    # 处理yarn-site.xml文件返回值
-    cluster_name, rm1_ip, rm2_ip = resourmanager.hdfs_site_conf()
-
-    # 检查配置文件信息核对，核对之后调用 namenode_api_info 返回jmx信息值
-    resourmanager.resourceManager_jmx_info_cx(cluster_name, rm1_ip, rm2_ip)
-
-    # 分析jmx指标，打印指标状态
-    # nn_jmx_analyse
-    # nn1 jmx
-    rm1_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn1_jmx)
-    rm2_ha_state = resourmanager.rm_ha_analyse(resourmanager.nn2_jmx)
-
-    if rm1_ha_state == "active" and rm2_ha_state == "standby":
-        jmx_cont = resourmanager.nn1_jmx
-        resourmanager.nn_jmx_analyse(jmx_cont)
-    elif rm1_ha_state == "standby" and rm2_ha_state == "active":
-        jmx_cont = resourmanager.nn2_jmx
-        resourmanager.nn_jmx_analyse(jmx_cont)
-    else:
-        print(
-            "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！")
-        exit(502)
 
 
 # 主函数
