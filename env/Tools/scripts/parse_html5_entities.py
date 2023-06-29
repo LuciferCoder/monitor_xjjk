@@ -17,13 +17,13 @@ from html.entities import html5
 entities_url = 'http://dev.w3.org/html5/spec/entities.json'
 
 def get_json(url):
-    """Download the json file from the url and returns a decoded object."""
+    """Download the json_dic file from the url and returns a decoded object."""
     with urlopen(url) as f:
         data = f.read().decode('utf-8')
     return json.loads(data)
 
 def create_dict(entities):
-    """Create the html5 dict from the decoded json object."""
+    """Create the html5 dict from the decoded json_dic object."""
     new_html5 = {}
     for name, value in entities.items():
         new_html5[name.lstrip('&')] = value['characters']

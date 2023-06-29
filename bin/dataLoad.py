@@ -4,7 +4,7 @@
 # 通用类
 # 功能： 导入述文件到hive数据库表
 # 主要使用 pyhive
-
+import base64
 import warnings
 
 # 屏蔽本条语句之后所有的告警（paramiko 告警报错）
@@ -20,7 +20,8 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
-
+# 数据库导入到MySQL
+import utils.mysqlUtil as myut
 
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
@@ -28,62 +29,37 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
 
-class DATALOADER():
+class DATALOADER(object):
     def __init__(self):
         self.BASE_DIR = BASE_DIR
         self.jsonfile_path = self.BASE_DIR + "/conf/dataload/dataload.json"
-        name, version, cluster_name, hiveconf, krb5conf, client_keytab, \
-            client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
-            hiveserver2_node_list, hiveserver2_node_port, \
-            metastore_node_list, metastore_node_port = self._json_parse()
+        name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
+            password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
+            datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql,table_name,charset = self._json_parse()
         self.name = name
         self.version = version
-        self.cluster_name = cluster_name
-        self.krb5conf = krb5conf
-        self.client_keytab = client_keytab
-        self.client_keytab_principle = client_keytab_principle
-        self.hiveconfname = hiveconf
-        self.hiveserver2_node_list = hiveserver2_node_list
-        self.hiveserver2_node_port = hiveserver2_node_port
-        self.metastore_node_list = metastore_node_list
-        self.metastore_node_port = metastore_node_port
+        self.usemysql = usemysql
+        self.use_pwd_coding = use_pwd_coding
+        self.user = user
+        self.port = port
+        self.host = host
+        self.password_encoding = password_encoding
+        self.password = password
+        self.database = database
 
-        # self.hiveconf = hiveconf
+        self.datalaod_hive_json = datalaod_hive_json
+        self.datalaod_hive_sql = datalaod_hive_sql
+        self.datalaod_hdfs_json = datalaod_hdfs_json
+        self.datalaod_hdfs_sql = datalaod_hdfs_sql
+        self.datalaod_yarn_json = datalaod_yarn_json
+        self.datalaod_yarn_sql = datalaod_yarn_sql
 
-        self.hiveconf_path = os.path.dirname(self.jsonfile_path) + "/" + self.hiveconfname
-        # hdfs_nodes数量，来自于健康检查返回的节点数
-        self.hdfs_node_count = 0
-        self.use_kerberos = use_kerberos
+        self.table_name = table_name
+        self.charset = charset
 
-        self.hive_site_file = "/conf/%s/%s" % (self.name, self.hiveconfname)
-
-        self.hive_site_filepath = self.BASE_DIR + self.hive_site_file
-
-        # 判断脚本执行参数,默认值 false 按照手动执行打印宕机的datanode主机;
-        # 值为true的按照定时任务执行，不打印宕机的节点，只抓取指标写入表中;
-        # 其它值无效
-        self.use_crontab = "false"
-        # self.use_crontab = "true"
-        # 当前时间： 年月日时分
-        self.datenow = datetime.now()
-        self.datenowstring = self.datenow.strftime("%Y%m%d%H%M%S")
-        # 前一天的当前时间
-        self.lastdayofnow = self.datenow - timedelta(days=1)
-        self.lastdayofnowstring = self.lastdayofnow.strftime("%Y%m%d%H%M%S")
-        # 前一天的年月日
-        self.lastdayofdate = self.lastdayofnow.strftime("%Y%m%d")
-
-        self.curday_cap = ""
-        self.ssh_user = ssh_user
-        self.ssh_pkey = ssh_pkey
-
-        self.hivesevrer2_node_isalived_list = []
-        self.metastore_node_isalived_list = []
-
-        self.hiveserverNode_jmx_result = []
-        self.metastoreNode_jmx_result = []
-
-        self.threadnum_list = []
+        # 通过set方法写入sql列表
+        # 通过get方法写入sql列表
+        self.sqlslist = []
 
     # hive配置文件参数分析
     def _json_parse(self):
@@ -94,36 +70,60 @@ class DATALOADER():
             name = load_dict["name"]
             version = load_dict["version"]
 
-            # 集群名称
-            cluster_name = load_dict["dependencies"]["config"]["cluster_name"]
+            # mysql 配置
+            # usemysql = load_dict["use_mysql"]
+            usemysql = load_dict["dependencies"]["config"]["use_mysql"]
+            use_pwd_coding = load_dict["dependencies"]["mysql"]["use_pwd_coding"]
+            user = load_dict["dependencies"]["mysql"]["user"]
+            host = load_dict["dependencies"]["mysql"]["host"]
+            port = load_dict["dependencies"]["mysql"]["port"]
+            password_encoding = load_dict["dependencies"]["mysql"]["password_encoding"]
+            password = load_dict["dependencies"]["mysql"]["password"]
+            database = load_dict["dependencies"]["mysql"]["database"]
+            table_name = load_dict["dependencies"]["mysql"]["table_name"]
+            charset = load_dict["dependencies"]["mysql"]["charset"]
 
-            # hive-site.xml
-            hiveconf = load_dict["dependencies"]["config"]["hivesconf"]
+            datalaod_hive_json = load_dict["dependencies"]["mysql"]["dataload_hive"]["json_dic"]
+            datalaod_hive_sql = load_dict["dependencies"]["mysql"]["dataload_hive"]["sql"]
+            datalaod_hdfs_json = load_dict["dependencies"]["mysql"]["dataload_hdfs"]["json_dic"]
+            datalaod_hdfs_sql = load_dict["dependencies"]["mysql"]["dataload_hdfs"]["sql"]
+            datalaod_yarn_json = load_dict["dependencies"]["mysql"]["dataload_yarn"]["json_dic"]
+            datalaod_yarn_sql = load_dict["dependencies"]["mysql"]["dataload_yarn"]["sql"]
+             # =
 
-            # 集群是否使用了kerberos
-            use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
-
-            # Kerberos相关配置
-            krb5conf = load_dict["dependencies"]["kerberos"]["krb5conf"]
-            client_keytab = load_dict["dependencies"]["kerberos"]["keytab"]
-            client_keytab_principle = load_dict["dependencies"]["kerberos"]["client_principle"]
-
-            # 集群节点信息
-            # 赶工期，目前支持key部署，密钥免密
-            ssh_user = load_dict["dependencies"]["config"]["ssh_user"]
-            ssh_pkey = load_dict["dependencies"]["config"]["ssh_pkey"]
-
-            ##hiveserver2 node list
-            hiveserver2_node_list = load_dict["dependencies"]["hivenodes"]["hiveserver2"]["hiveserverNodes"]
-            hiveserver2_node_port = load_dict["dependencies"]["hivenodes"]["hiveserver2"]["hiveserverPort"]
-
-            ##hive metastore node list
-            metastore_node_list = load_dict["dependencies"]["hivenodes"]["metastore"]["metastoreNodes"]
-            metastore_node_port = load_dict["dependencies"]["hivenodes"]["metastore"]["metastorePort"]
-
-            return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
-                use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-                metastore_node_list, metastore_node_port
+            # # 集群名称
+            # cluster_name = load_dict["dependencies"]["config"]["cluster_name"]
+            #
+            # # hive-site.xml
+            # hiveconf = load_dict["dependencies"]["config"]["hivesconf"]
+            #
+            # # 集群是否使用了kerberos
+            # use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
+            #
+            # # Kerberos相关配置
+            # krb5conf = load_dict["dependencies"]["kerberos"]["krb5conf"]
+            # client_keytab = load_dict["dependencies"]["kerberos"]["keytab"]
+            # client_keytab_principle = load_dict["dependencies"]["kerberos"]["client_principle"]
+            #
+            # # 集群节点信息
+            # # 赶工期，目前支持key部署，密钥免密
+            # ssh_user = load_dict["dependencies"]["config"]["ssh_user"]
+            # ssh_pkey = load_dict["dependencies"]["config"]["ssh_pkey"]
+            #
+            # ##hiveserver2 node list
+            # hiveserver2_node_list = load_dict["dependencies"]["hivenodes"]["hiveserver2"]["hiveserverNodes"]
+            # hiveserver2_node_port = load_dict["dependencies"]["hivenodes"]["hiveserver2"]["hiveserverPort"]
+            #
+            # ##hive metastore node list
+            # metastore_node_list = load_dict["dependencies"]["hivenodes"]["metastore"]["metastoreNodes"]
+            # metastore_node_port = load_dict["dependencies"]["hivenodes"]["metastore"]["metastorePort"]
+            #
+            # return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
+            #     use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
+            #     metastore_node_list, metastore_node_port
+            return name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
+                password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
+                datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql,table_name,charset
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -151,5 +151,49 @@ class DATALOADER():
         krbticket.KrbCommand.kinit(kconfig)
         # cont = krbticket.KrbTicket.get(keytab=keytab_file,principal=principle)
 
+    # base64解密
+    def password_decode(self):
+        if self.use_pwd_coding == "true":
+            self.password = base64.b64decode(self.password_encoding.encode()).decode()
+            print("password decode complete")
 
-import pyhive
+    def set_sqllist(self, sqllisted):
+        try:
+            self.sqlslist = sqllisted
+        except Exception as e:
+            print(e)
+
+    def get_sqlliste(self):
+        try:
+            sqllist = self.sqlslist
+        except Exception as e:
+            print(e)
+
+    def loaddata_main(self):
+        # dataloader = DATALOADER()
+        self.password_decode
+        host = self.host
+        user = self.user
+        password = self.password
+        database = self.database
+        port = int(self.port)
+        charset = self.charset
+
+        # SQL语句列表
+        sqlslist = self.sqlslist
+
+        mysqler = myut.MysqlUtil(host=host,
+                                 user=user,
+                                 password=password,
+                                 database=database,
+                                 port=port,
+                                 charset=charset,
+                                 sqlslist=sqlslist)
+
+        mysqler.cursor_cnn()
+
+        # 调用方法插入数据
+        mysqler.insertdatas()
+
+# if __name__ == '__main__':
+#     main

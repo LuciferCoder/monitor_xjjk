@@ -39,7 +39,7 @@
     "mysql": {
       "use_pwd_coding": "false",
       "user": "root",
-      "host": "10.0.0.5",
+      "host": "172.16.36.40",
       "port": "3306",
       "password_encoding": "MGd2ekpyNjZpTnM1",
       "password": "0gvzJr66iNs5",

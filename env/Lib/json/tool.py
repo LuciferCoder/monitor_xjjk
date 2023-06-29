@@ -2,11 +2,11 @@ r"""Command-line tool to validate and pretty-print JSON
 
 Usage::
 
-    $ echo '{"json":"obj"}' | python -m json.tool
+    $ echo '{"json_dic":"obj"}' | python -m json_dic.tool
     {
-        "json": "obj"
+        "json_dic": "obj"
     }
-    $ echo '{ 1.2:3.4}' | python -m json.tool
+    $ echo '{ 1.2:3.4}' | python -m json_dic.tool
     Expecting property name enclosed in double quotes: line 1 column 3 (char 2)
 
 """
@@ -17,8 +17,8 @@ import sys
 
 
 def main():
-    prog = 'python -m json.tool'
-    description = ('A simple command line interface for json module '
+    prog = 'python -m json_dic.tool'
+    description = ('A simple command line interface for json_dic module '
                    'to validate and pretty-print JSON objects.')
     parser = argparse.ArgumentParser(prog=prog, description=description)
     parser.add_argument('infile', nargs='?', type=argparse.FileType(),

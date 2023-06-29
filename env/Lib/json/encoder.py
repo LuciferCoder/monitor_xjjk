@@ -182,7 +182,7 @@ class JSONEncoder(object):
     def encode(self, o):
         """Return a JSON string representation of a Python data structure.
 
-        >>> from json.encoder import JSONEncoder
+        >>> from json_dic.encoder import JSONEncoder
         >>> JSONEncoder().encode({"foo": ["bar", "baz"]})
         '{"foo": ["bar", "baz"]}'
 

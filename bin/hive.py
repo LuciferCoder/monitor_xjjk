@@ -17,13 +17,16 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
+# 数据导入到mysql
+import dataLoad
+
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
 
-class HIVER():
+class HIVER(object):
     def __init__(self):
         self.BASE_DIR = BASE_DIR
         self.jsonfile_path = self.BASE_DIR + "/conf/hive/hive.json"
@@ -59,14 +62,17 @@ class HIVER():
         # 其它值无效
         self.use_crontab = "false"
         # self.use_crontab = "true"
-        # 当前时间： 年月日时分
+        # 当前时间： 年月日时分秒
         self.datenow = datetime.now()
         self.datenowstring = self.datenow.strftime("%Y%m%d%H%M%S")
+        self.datenowdate = self.datenow.strftime("%Y%m%d")
+        self.datenowtime = self.datenow.strftime("%H%M%S")
         # 前一天的当前时间
         self.lastdayofnow = self.datenow - timedelta(days=1)
         self.lastdayofnowstring = self.lastdayofnow.strftime("%Y%m%d%H%M%S")
         # 前一天的年月日
         self.lastdayofdate = self.lastdayofnow.strftime("%Y%m%d")
+        self.datenowdate = self.datenow.strftime("%Y%m%d")
 
         self.curday_cap = ""
         self.ssh_user = ssh_user
@@ -78,7 +84,21 @@ class HIVER():
         self.hiveserverNode_jmx_result = []
         self.metastoreNode_jmx_result = []
 
+        # 数据写入本地，并导入mysql
         self.threadnum_list = []
+        # 初始化dataload对象
+        self.dataloader = dataLoad.DATALOADER()
+
+        self.dataload_hive_json_dir = self.dataloader.datalaod_hive_json
+        self.dataload_hive_json_dir_abs = BASE_DIR + self.dataload_hive_json_dir
+        self.dataload_hive_json_filenamePath = self.dataload_hive_json_dir_abs + "/%s_hive_dml.json" % self.datenowstring
+
+        self.dataload_hive_sql_dir = self.dataloader.datalaod_hive_sql
+        self.dataload_hive_sql_dir_abs = BASE_DIR + self.dataload_hive_sql_dir
+        self.dataload_hive_sql_filenamePath = self.dataload_hive_sql_dir_abs + "/%s_hive_dml.sql" % self.datenowstring
+
+        self.table_name = self.dataloader.table_name
+        # 指标值字典列表，用于dataLoad生成语句
 
     # hive配置文件参数分析
     def _json_parse(self):
@@ -167,7 +187,7 @@ class HIVER():
         hiverserver2_port = self.hiveserver2_node_port
         hiveserver2nodeslist = self.hiveserver2_node_list
         for hiverservernode in hiveserver2nodeslist:
-            # hivenode_json = json.loads(hiverservernode)
+
             hivenode_json = hiverservernode
             ip = hivenode_json["ip"]
             hostname = hivenode_json["hostname"]
@@ -180,7 +200,7 @@ class HIVER():
         metastore_port = self.metastore_node_port
         hive_metastore_list = self.metastore_node_list
         for hivemetastore in hive_metastore_list:
-            # hivemetastore_json = json.loads(hivemetastore)
+
             hivemetastore_json = hivemetastore
             ip = hivemetastore_json["ip"]
             hostname = hivemetastore_json["hostname"]
@@ -200,25 +220,71 @@ class HIVER():
         hivesevrer2_node_isalived_list = self.hivesevrer2_node_isalived_list
         metastore_node_isalived_list = self.metastore_node_isalived_list
 
+        # 数据写入字段：
+        # 服务：bigdata_component
+        # 角色： component_service
+        # 日期：date
+        # 时间：time
+        # 存活状态：component_service_status
+        # IP: ip
+        # 主机名：hostname
+
+        bigdata_component = self.name
+        date = self.datenowdate
+        time = self.datenowtime
+
         for node in hivesevrer2_node_isalived_list:
-            # node_json = json.loads(node)
+            component_service = "hiveserver2"
+
             node_json = json.loads(node)
             isalived = node_json["alived"]
             if isalived == "true":
-                pass
-            else:
+                # 存活为0
+                component_service_status = 0
                 ip = node_json["ip"]
                 hostname = node_json["hostname"]
+                dic_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","component_service_status":"%s","ip":"%s","hostname":"%s"}' % \
+                             (bigdata_component, component_service, date, time, component_service_status, ip, hostname)
+                self.jsondata_writer(dic_string)
+            else:
+                # 不存活为1
+                component_service_status = 1
+                ip = node_json["ip"]
+                hostname = node_json["hostname"]
+                dic_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","component_service_status":"%s","ip":"%s","hostname":"%s"}' % \
+                             (bigdata_component, component_service, date, time, component_service_status, ip, hostname)
+                self.jsondata_writer(dic_string)
                 print("主机 %s, IP %s 上的服务 HiveServer2 服务 Down" % (hostname, ip))
 
+        # 数据写入字段：
+        # 服务：hive
+        # 角色： metastore
+        # 日期：date
+        # 时间：time
+        # 存活状态：component_service_status
+        # IP: ip
+        # 主机名：hostname
+
         for node in metastore_node_isalived_list:
+            component_service = "metastore"
             node_json = json.loads(node)
             isalived = node_json["alived"]
             if isalived == "true":
-                pass
+                # 存活为0
+                component_service_status = 0
+                ip = node_json["ip"]
+                hostname = node_json["hostname"]
+                dic_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","component_service_status":"%s","ip":"%s","hostname":"%s"}' % \
+                             (bigdata_component, component_service, date, time, component_service_status, ip, hostname)
+                self.jsondata_writer(dic_string)
             else:
                 ip = node_json["ip"]
                 hostname = node_json["hostname"]
+                # 不存活为1
+                component_service_status = 1
+                dic_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","component_service_status":"%s","ip":"%s","hostname":"%s"}' % \
+                             (bigdata_component, component_service, date, time, component_service_status, ip, hostname)
+                self.jsondata_writer(dic_string)
                 print("主机 %s, IP %s 上的服务 Hive Metastore 服务 Down" % (hostname, ip))
 
     # 包装远程连接方法，执行命令返回结果
@@ -268,6 +334,18 @@ class HIVER():
         # 连接数
         threadnum_list = []
 
+        # dataload写入字符串
+        # 数据写入字段：
+        # 服务：bigdata_component
+        # 角色： component_service
+        # 日期：date
+        # 时间：time
+        # GC时间：gctime
+        # 堆内存使用率：heap_usage
+        # IP: ip
+        # 主机名：hostname
+        # Hvieserver2的连接客户端数量：client_num
+
         # hiveserver2
         for hiveserver_node in hivesevrer2_node_isalived_list:
             node_json = json.loads(hiveserver_node)
@@ -284,31 +362,59 @@ class HIVER():
             beans = result_json["beans"]
             threadnum = 0
             for bean in beans:
-                # bean_json = json.loads(bean)
+
                 bean_json = bean
                 name = bean_json["name"]
                 if name == "metrics:name=gc.PS-MarkSweep.time":
                     gctimevalue = bean_json["Value"]
                 elif name == "metrics:name=memory.heap.usage":
                     heapusage = bean_json["Value"]
+                    # print(heapusage)
                 elif name == "metrics:name=threads.count":
                     threadnum = bean_json["Value"]
                     # threadnum_list.append()
 
-            heapusage = '{:.2%}'.format(heapusage)
+            # dataload写入字符串
+            # 数据写入字段：
+            # 服务：bigdata_component
+            # 角色： component_service
+            # 日期：date
+            # 时间：time
+            # GC时间：gctime
+            # 堆内存使用率：heap_usage
+            # IP: ip
+            # 主机名：hostname
+            # Hvieserver2的连接客户端数量：client_num
+
+            heapusage = '{:.2%}'.format(float(heapusage))
+            # heapusage = '{:.2%}'.format(heapusage)
+            bigdata_component = self.name
+            component_service = "hiveserver2"
+            date = self.datenowdate
+            time = self.datenowtime
+            gctime = gctimevalue
+            heap_usage = heapusage
+            ip = ip
+            hostname = hostname
+            client_num = threadnum
+            json_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","gctime":"%s","heap_usage":"%s","ip":"%s","hostname":"%s","client_num":"%s"}' % \
+                          (bigdata_component, component_service, date, time, gctime, heap_usage, ip, hostname,
+                           client_num)
+            self.jsondata_writer(json_string)
+
+            # heapusage = '{:.2%}'.format(heapusage)
             json_str = '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}' \
                        % (hostname, ip, gctimevalue, heapusage)
+
             hiveserverNode_jmx_result.append(json_str)
             # usage = '{:.2%}'.format(float(used) / float(int(MaxHeapSize)))
 
             # 客户端连接数
             json_nu_str = '{"hostname":"%s", "ip":"%s", "threadnum":"%s"}' \
-                       % (hostname, ip, threadnum)
+                          % (hostname, ip, threadnum)
             threadnum_list.append(json_nu_str)
 
-
-
-        # metasore
+        # metastore
         for metastore_node in metastore_node_isalived_list:
             node_json = json.loads(metastore_node)
             ip = node_json["ip"]
@@ -375,6 +481,32 @@ class HIVER():
 
             metastoreNode_jmx_result.append(json_str)
 
+
+            # dataload写入字符串
+            # 数据写入字段：
+            # 服务：bigdata_component
+            # 角色： component_service
+            # 日期：date
+            # 时间：time
+            # GC时间：gctime
+            # 堆内存使用率：heap_usage
+            # IP: ip
+            # 主机名：hostname
+            # Hvieserver2的连接客户端数量：client_num
+            bigdata_component = self.name
+            component_service = "metastore"
+            date = self.datenowdate
+            time = self.datenowtime
+            gctime = gctimevalue
+            heap_usage = heapusage
+            ip = ip
+            hostname = hostname
+            client_num = threadnum
+            json_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","gctime":"%s","heap_usage":"%s","ip":"%s","hostname":"%s","client_num":"%s"}' % \
+                          (bigdata_component, component_service, date, time, gctime, heap_usage, ip, hostname,
+                           client_num)
+            self.jsondata_writer(json_string)
+
         self.hiveserverNode_jmx_result = hiveserverNode_jmx_result
         self.metastoreNode_jmx_result = metastoreNode_jmx_result
         self.threadnum_list = threadnum_list
@@ -395,7 +527,8 @@ class HIVER():
             ip = node_json["ip"]
             gctimevalue = node_json["gctimevalue"]
             heapusage = node_json["heapusage"]
-            print("主机 %s, IP %s 上的 HievServer2 服务的 GC时间：%s, 内存使用率：%s" % (hostname, ip, gctimevalue, heapusage))
+            print("主机 %s, IP %s 上的 HievServer2 服务的 GC时间：%s, 内存使用率：%s" % (
+                hostname, ip, gctimevalue, heapusage))
 
     # screen hiveserver2 jmx result
     def screnn_metastore_jmx_re(self):
@@ -407,8 +540,8 @@ class HIVER():
             ip = node_json["ip"]
             gctimevalue = node_json["gctimevalue"]
             heapusage = node_json["heapusage"]
-            print("主机 %s, IP %s 上的HievMetastore服务的GC时间：%s, 内存使用率：%s" % (hostname, ip, gctimevalue, heapusage))
-
+            print("主机 %s, IP %s 上的HievMetastore服务的GC时间：%s, 内存使用率：%s" % (
+                hostname, ip, gctimevalue, heapusage))
 
     # 指标： Hvieserver2的连接客户端数量
     def hiveserver_client_num(self):
@@ -424,6 +557,58 @@ class HIVER():
 
             print("主机 %s, IP %s 上的HievServer2服务的客户端连接数：%s" % (hostname, ip, threadnum))
 
+    """
+    # 取所有指标参数，整合成为datajson,所有值不为空的dic的key作为关键字，值作为insert的值，生成sql语句，将语句写入本地文件、json数据写入本地文件
+    # 整合的sql语句列表调用返回给 dataLoad 作为参数set进去，执行insert
+    # 文件名： 年月日时分秒_组件名_ddl.json
+    # 文件名： 年月日时分秒_组件名_ddl.sql
+    """
+
+    def dataAllwriter(self):
+        sqllist = []
+        # 字典
+        jsonfile = self.dataload_hive_json_filenamePath
+        # "insert into table(key1, key2, key3) values(value1,value2,value3);"
+        sqlfile = open(self.dataload_hive_sql_filenamePath, 'a', encoding="utf-8")
+        table_name= self.table_name
+        with open(jsonfile, 'r') as file:
+            dic_list = file.readlines()
+            for dic in dic_list:
+                dic = json.loads(dic)
+                keys = dic.keys()
+                values = []
+                for key in keys:
+                    value = dic["%s" % key]
+                    values.append(value)
+                # 生成一条语句：
+                key_string = ",".join(keys)
+                values_string = "'"+"','".join(values)+"'"
+                #
+                # print("key_string: ")
+                # print(key_string)
+                #
+                # print("values_string: ")
+                # print(values_string)
+
+                sql = "insert into %s(%s) values(%s);\n" % (table_name, key_string, values_string)
+
+                sqllist.append(sql)
+
+                # 写入sql语句到sql文件
+                sqlfile.write(sql)
+            file.close()
+        sqlfile.close()
+
+        self.dataloader.set_sqllist(sqllisted=sqllist)
+        self.dataloader.loaddata_main()
+
+    # 数据写入本地json文件
+    # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
+    def jsondata_writer(self, dicstring):
+        jsonfile = self.dataload_hive_json_filenamePath
+        with open(jsonfile, 'a', encoding="utf-8") as file:
+            file.write(dicstring + "\n")
+            file.close()
 
 
 """
@@ -457,6 +642,9 @@ def main_one():
     hiver.hivejmx()
 
     hiver.hiveserver_client_num()
+
+    # 数据导入到mysql
+    hiver.dataAllwriter()
 
 
 if __name__ == '__main__':
