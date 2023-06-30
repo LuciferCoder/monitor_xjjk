@@ -93,8 +93,8 @@ class HIVER(object):
         self.dataload_hive_json_dir_abs = BASE_DIR + self.dataload_hive_json_dir
         self.dataload_hive_json_filenamePath = self.dataload_hive_json_dir_abs + "/%s_hive_dml.json" % self.datenowstring
 
-        self.dataload_hive_sql_dir = self.dataloader.datalaod_hive_sql
-        self.dataload_hive_sql_dir_abs = BASE_DIR + self.dataload_hive_sql_dir
+        self.dataload_hive_json_dir = self.dataloader.datalaod_hive_sql
+        self.dataload_hive_sql_dir_abs = BASE_DIR + self.dataload_hive_json_dir
         self.dataload_hive_sql_filenamePath = self.dataload_hive_sql_dir_abs + "/%s_hive_dml.sql" % self.datenowstring
 
         self.table_name = self.dataloader.table_name
@@ -564,6 +564,7 @@ class HIVER(object):
     # 文件名： 年月日时分秒_组件名_ddl.sql
     """
 
+    # 此方法可以重构，提出到单独的类方法以精简代码量
     def dataAllwriter(self):
         sqllist = []
         # 字典
@@ -595,6 +596,7 @@ class HIVER(object):
 
     # 数据写入本地json文件
     # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
+    # 此方法可以重构，提出到单独的类方法以精简代码量
     def jsondata_writer(self, dicstring):
         jsonfile = self.dataload_hive_json_filenamePath
         with open(jsonfile, 'a', encoding="utf-8") as file:

@@ -16,15 +16,21 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
+# 数据导入到mysql
+import dataLoad
+
 """
-# 李冬亮
-# 03月24日 00:08
+# ldl
+# 2023年6月30日15:08:33
 """
 
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
+
+# 数据写入到MySQL
+
 
 # from EXECUTION.conf import Alarm as Alarm, Logger as LoggerSS
 # from conf import Alarm as Alarm, Logger as Logger
@@ -53,6 +59,11 @@ from conf import Logger as Logger
 class ResourceManager():
     # init 初始化内部变量,初始化内部参数
     def __init__(self):
+        # yarn_nospace
+        self.availableGaia = None
+        # 队列监控
+        self.rootQueue_usage_percent = None
+
         self.rm1_jmx = None
         self.rm2_jmx = None
         self.use_crontab = None
@@ -66,7 +77,9 @@ class ResourceManager():
         self.BASE_DIR = BASE_DIR
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/yarn/yarn.json"
-        name, version, cluster_name, yarnconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport = self._json_parse()
+        name, version, cluster_name, yarnconf, krb5conf, client_keytab, client_keytab_principle, \
+            rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, \
+            nodemanagerJmxport, rm1_hostname, rm2_hostname = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -87,6 +100,8 @@ class ResourceManager():
         self.ssh_pkey = ssh_pkey
         self.nodemanagerJmxport = nodemanagerJmxport
         self.nodemanager_port = self.nodemanagerJmxport
+        self.rm1_hostname = rm1_hostname
+        self.rm2_hostname = rm2_hostname
 
         self.yarn_site_filepath = self.BASE_DIR + "/conf/yarn/%s" % self.yarnconf
         self.yarnsite_clustername = ""
@@ -125,8 +140,36 @@ class ResourceManager():
         self.lastdayofnowstring = self.lasttmofnow.strftime("%Y%m%d%H%M%S")
         # 前一天的年月日
         self.lastdayofdate = self.lasttmofnow.strftime("%Y%m%d")
-        # print(self.lasttmofnow)
-        # exit(0)
+
+        ## 指标入库
+        self.datenowdate = self.datenow.strftime("%Y%m%d")
+        self.datenowtime = self.datenow.strftime("%H%M%S")
+        self.lastdayofdate = self.lastdayofnow.strftime("%Y%m%d")
+        self.datenowdate = self.datenow.strftime("%Y%m%d")
+
+        # 数据写入本地，并导入mysql
+        self.threadnum_list = []
+        # 初始化dataload对象
+        self.dataloader = dataLoad.DATALOADER()
+
+        self.dataload_yarn_json_dir = self.dataloader.datalaod_yarn_json
+        self.dataload_yarn_json_dir_abs = BASE_DIR + self.dataload_yarn_json_dir
+        self.dataload_yarn_json_filenamePath = self.dataload_yarn_json_dir_abs + "/%s_yarn_dml.json" % self.datenowstring
+
+        self.dataload_yarn_sql_dir = self.dataloader.datalaod_yarn_sql
+        self.dataload_yarn_sql_dir_abs = BASE_DIR + self.dataload_yarn_sql_dir
+        self.dataload_yarn_sql_filenamePath = self.dataload_yarn_sql_dir_abs + "/%s_yarn_dml.sql" % self.datenowstring
+
+        self.table_name = self.dataloader.table_name
+        # 指标值字典列表，用于dataLoad生成语句
+
+        # nodemanager down 数量
+        # 集群节点数(Dead Nodes )	dead_nodes
+        self.nodemanager_donwnum = 0
+        # 存活节点数	alive_nodes
+        self.alive_node_num = 0
+
+        self.AppSubmitted_perday = 0
 
         # json配置文件分析
 
@@ -161,8 +204,10 @@ class ResourceManager():
             ##rm
             rm1 = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1"]
             rm1_port = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1_port"]
+            rm1_hostname = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1_hostname"]
             rm2 = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm2"]
             rm2_port = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm2_port"]
+            rm2_hostname = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1_hostname"]
 
             ##nodemanager
             # dic list
@@ -171,7 +216,9 @@ class ResourceManager():
             # nodemanager_port
             nodemanagerJmxport = load_dict["dependencies"]["hadoop_nodes"]["nodemanagerJmxport"]
 
-            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport
+            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, \
+                rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport, \
+                rm1_hostname, rm2_hostname
 
     # yarn-site.xml文件处理，返回参数
     # 逻辑中尚未用到
@@ -279,6 +326,7 @@ class ResourceManager():
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 # 输出命令执行结果
                 result = stdout.read()
+                # print(result)
                 ssh.close()
                 bl = ""
                 if int(result) == 1:
@@ -292,6 +340,7 @@ class ResourceManager():
                 stdin, stdout, stderr = ssh.exec_command(cmd)
                 # 输出命令执行结果
                 result = stdout.read()
+                # print(result)
                 ssh.close()
                 bl = ""
                 if int(result) == 1:
@@ -446,6 +495,21 @@ class ResourceManager():
         jmx_content = jmx_cont
         jmx_content = json.loads(jmx_content)
         beans = jmx_content["beans"]
+
+        """
+        指标入库：
+        日期	date	varchar(50)	20230629
+        时间	time	varchar(50)	111352
+        大数据组件名称	bigdata_component	varchar(50)	大数据组件名称
+        存活节点数	alive_nodes
+        YARNNodeManager不健康，请检查磁盘空间使用率是否超过90%	NodeManager_healthy
+        """
+        date = self.datenowdate
+        time = self.datenowtime
+        bigdata_component = self.name
+        alive_nodes = None
+        NodeManager_healthy = None
+
         # print(beans)
         for dic in beans:
             # 开始取指标
@@ -457,6 +521,7 @@ class ResourceManager():
             if dic["name"] == "Hadoop:service=ResourceManager,name=ClusterMetrics":
                 nodemanager_alive_num = dic["NumActiveNMs"]
                 self.nodemanager_alive_num_from_jmx = nodemanager_alive_num
+                alive_nodes = nodemanager_alive_num
 
             """
             抓取 alive 状态的nodemanager列表
@@ -467,7 +532,7 @@ class ResourceManager():
                 # print("LiveNodeManagers LiveNodeManagers "+str(type(LiveNodeManagers)))
                 # 返回列表
                 livenodes = json.loads(LiveNodeManagers)
-                self.LiveNodeManagers = livenodes
+                # self.LiveNodeManagers = livenodes
 
             """
             NumUnhealthyNMs
@@ -477,6 +542,21 @@ class ResourceManager():
             if dic["name"] == "Hadoop:service=ResourceManager,name=ClusterMetrics":
                 nodemanager_NumUnhealthyNMs = dic["NumUnhealthyNMs"]
                 self.nodemanager_NumUnhealthyNMs = nodemanager_NumUnhealthyNMs
+                # NodeManager_healthy = nodemanager_NumUnhealthyNMs
+
+        # date = self.datenowdate
+        # time = self.datenowtime
+        # bigdata_component = self.name
+        # alive_nodes = None
+        # NodeManager_healthy = None
+
+        # json_string = '{"date":"%s","time":"%s","bigdata_component":"%s",' \
+        #               '"alive_nodes":"%s","NodeManager_healthy":"%s"}' % (date,
+        #                                                                   time,
+        #                                                                   bigdata_component,
+        #                                                                   alive_nodes,
+        #                                                                   NodeManager_healthy)
+        # self.jsondata_writer(json_string)
 
     """
     # yarn nodemanager is down
@@ -529,21 +609,24 @@ class ResourceManager():
             if len(down_ip_host_list) == 0:
                 print("Nodemanager is Down: %s " % str(len(down_ip_host_list)))
             else:
+                self.nodemanager_donwnum = len(down_ip_host_list)
                 for doonip in down_ip_host_list:
                     ip = doonip["ip"]
                     port = self.nodemanager_port
                     hostname = doonip["ip"]
-                    pswc_cmd = "ps -ef |grep resourcemanager.ResourceManager|grep -v grep|wc -l"
+                    pswc_cmd = "ps -ef |grep nodemanager.NodeManager|grep -v grep|wc -l"
                     user = self.ssh_user
                     keyfile_path = self.ssh_pkey
 
                     # 端口探活
                     socket_ck_re = self.socket_check(ip=ip, port=port)
+                    # print(socket_ck_re)
 
                     # 服务检查
                     nn_ssh_result = self.ssh_connect(ip=ip, port=22, password="", use_pwd="false",
                                                      ssh_keyfile=keyfile_path,
                                                      user=user, cmd=pswc_cmd)
+                    # print(nn_ssh_result)
 
                     # 此处逻辑：
                     # 服务存在且端口正验证正常视为Namenode正常
@@ -555,6 +638,27 @@ class ResourceManager():
                         print("IP: %s 上的nodemanager服务状态：Down" % ip)
                         # return "down"
             self.alive_ip_host_list = alive_ip_host_list
+            self.alive_node_num = len(alive_ip_host_list)
+
+            """
+            集群信息相关指标 入库
+            
+            """
+            date = self.datenowdate
+            time = self.datenowtime
+            bigdata_component = self.name
+            alive_nodes = self.alive_node_num
+            NodeManager_healthy = self.nodemanager_NumUnhealthyNMs
+            dead_nodes = self.nodemanager_donwnum
+
+            json_string = '{"date":"%s","time":"%s","bigdata_component":"%s",' \
+                          '"alive_nodes":"%s","NodeManager_healthy":"%s","dead_nodes":"%s"}' % (date,
+                                                                                      time,
+                                                                                      bigdata_component,
+                                                                                      alive_nodes,
+                                                                                      NodeManager_healthy,
+                                                                                      dead_nodes)
+            self.jsondata_writer(json_string)
 
     """
     指标：Nodemanager gc 时间
@@ -597,6 +701,31 @@ class ResourceManager():
             ip = gctime_host["gctime_host"]
             gc_time = gctime_host["gctime"]
             print("主机： %s, IP: %s,GCTime 为 %s 毫秒.") % (hostname, ip, gc_time)
+
+            """
+            nodemanager gctime指标入库
+            日期	date
+            时间	time
+            ip
+            hostname
+            大数据组件名称	bigdata_component
+            组件服务名称	component_service
+            GCTIME/GC时间	gctime
+            """
+            date = self.datenowdate
+            time = self.datenowtime
+            bigdata_component = self.name
+            component_service = "nodemanager"
+            gctime = gc_time
+            json_string = '{"hostname":"%s","ip":"%s","date":"%s","time":"%s","bigdata_component":"%s",' \
+                          '"component_service":"%s","gctime":"%s"}' % (hostname,
+                                                                       ip,
+                                                                       date,
+                                                                       time,
+                                                                       bigdata_component,
+                                                                       component_service,
+                                                                       gctime)
+            self.jsondata_writer(json_string)
 
     # 队列资源分析
     def queue_analyse_jmx(self, rmip, rmport):
@@ -659,11 +788,15 @@ class ResourceManager():
         # 队列root的使用率
         rootQueue_usage_percent = "{:.2%}".format(float(self.AllocatedMB) / float(self.AvailableMB) / 100)
         print("队列资源监控: root队列使用率 %s " % rootQueue_usage_percent)
+        self.rootQueue_usage_percent = rootQueue_usage_percent
 
         # 指标： YARN上没有足够可分配的资源
         # 低于yarn容器最低资源要求
         if int(self.AvailableVCores) < 1 or int(self.AllocatedMB) < 1024:
             print("YARN上没有足够可分配的资源")
+            self.availableGaia = 1
+        else:
+            self.availableGaia = 0
 
         # 指标：
         # （6）YRAN计算任务过多
@@ -689,6 +822,61 @@ class ResourceManager():
         # 指标参数：AppsSubmitted 提交的App数
         AppsSubmitted = bean_json["AvailableVCores"]
         self.AppsSubmitted = AppsSubmitted
+
+        """
+        指标监控入库
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        yarn内核总数	rm_core_total
+        yarn内核使用	rm_core_used
+        yarn内核可用（剩余）	rm_core_avalable
+        yarn内存总数	rm_mem_total
+        yarn内存使用	rm_mem_use
+        yarn内存可用（剩余）	rm_mem_available
+        正在运行的作业数量	Apprunning
+        失败作业数	AppFailed
+        提交的作业数总数	AppSubmitted
+        Pengding作业数量	AppPending
+        yarn_nospace
+        # 新增 队列资源监控
+        rootqueue_usage_percent
+
+        """
+        date = self.datenowdate
+        time = self.datenowtime
+        bigdata_component = self.name
+        rm_core_total = self.FairShareVCores
+        rm_core_used = self.AllocatedVCores
+        rm_core_avalable = self.AvailableVCores
+        rm_mem_total = self.FairShareMB
+        rm_mem_use = self.AllocatedMB
+        rm_mem_available = self.AvailableMB
+        Apprunning = self.AppsRunning
+        AppFailed = self.AppsFailed
+        AppSubmitted = self.AppsSubmitted
+        AppPending = self.AppsPending
+        yarn_nospace = self.availableGaia
+        rootqueue_usage_percent = self.rootQueue_usage_percent
+
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","rm_core_total":"%s","rm_core_used":"%s",' \
+                      '"rm_core_avalable":"%s","rm_mem_total":"%s","rm_mem_use":"%s","rm_mem_available":"%s",' \
+                      '"Apprunning":"%s","AppFailed":"%s","AppSubmitted":"%s",' \
+                      '"AppPending":"%s","yarn_nospace":"%s","rootqueue_usage_percent":"%s"}' % (date, time,
+                                                                                                 bigdata_component,
+                                                                                                 rm_core_total,
+                                                                                                 rm_core_used,
+                                                                                                 rm_core_avalable,
+                                                                                                 rm_mem_total,
+                                                                                                 rm_mem_use,
+                                                                                                 rm_mem_available,
+                                                                                                 Apprunning,
+                                                                                                 AppFailed,
+                                                                                                 AppSubmitted,
+                                                                                                 AppPending,
+                                                                                                 yarn_nospace,
+                                                                                                 rootqueue_usage_percent)
+        self.jsondata_writer(json_string)
 
     # 待编辑计算的参数
     # （1）YARN任务排队超过10min
@@ -725,6 +913,12 @@ class ResourceManager():
         filename = "%s_crontab_yarn_Apps.json" % curtime
         path = BASE_DIR + "/cron/yarn/%s" % filename
 
+        # 数据入库字段，有排队队列超过十分钟使数字等于排队队列数值
+        """
+        指标值入库
+        """
+        Apppending_longten = 0
+
         # 判断pending状态的作业
         # 当前为0 直接写入文件
         if int(pendingAppNum) == 0:
@@ -733,6 +927,7 @@ class ResourceManager():
                 file.close()
             # 写入文件数据到当前时间戳文件
             # 可以选择不打印此处
+            Apppending_longten = pendingAppNum
             print("YARN任务排队数量: %s ,写入json数据文件到本地" % pendingAppNum)
         else:
             # pendding数不为0,读取十分钟前的数据
@@ -753,12 +948,30 @@ class ResourceManager():
                     AppsPending = reader_json["AppsPending"]
                     if int(AppsPending) != 0:
                         print("YARN任务排队超过10min, 当前排队数量: %s " % str(pendingAppNum))
+                        Apppending_longten = pendingAppNum
+
             else:
                 # 10分钟前的文件不存在，直接写数据到本地
                 with open(new_filepath, 'w', encoding="utf-8") as file:
                     file.write(json_str)
                     file.close()
                 print("没有获取到10分钟前的数据文件,YARN任务排队数量: %s ,请注意检查处理" % pendingAppNum)
+
+        """
+        指标入库
+        YARN任务排队超过10min	Apppending_longten
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        """
+        date = self.datenowdate
+        time = self.datenowtime
+        bigdata_component = self.name
+        Apppending_longten = Apppending_longten
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","Apppending_longten":"%s"}' % (date, time,
+                                                                                                        bigdata_component,
+                                                                                                        Apppending_longten)
+        self.jsondata_writer(json_string)
 
     # 取文件，年月日时分所在文件
     """
@@ -791,13 +1004,71 @@ class ResourceManager():
                 reader_cont = reader.read()
                 reader_cont_json = json.loads(reader_cont)
                 AppSubmitted_lastday = reader_cont_json["AppsSubmitted"]
+                self.AppSubmitted_perday = AppSubmitted_lastday
 
                 # 计算作业数
                 abs_num = int(AppSubmitted_lastday) - int(AppSubmitted)
                 print("每天用户提交的作业数: %s" % str(abs_num))
         else:
+            self.AppSubmitted_perday = AppSubmitted
             print("前一天相同时间 %s 没有记录的数据存在！当前时间 %s 已提交作业数：%s" % (
-            str(self.datenow), str(self.lastdayofnow), AppSubmitted))
+                str(self.datenow), str(self.lastdayofnow), AppSubmitted))
+
+        """
+        指标入库
+        每天用户提交的作业数	AppSubmitted_perday
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        """
+        date = self.datenowdate
+        time = self.datenowtime
+        bigdata_component = self.name
+        AppSubmitted_perday = self.AppSubmitted_perday
+
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s",' \
+                      '"AppSubmitted_perday":"%s"}' % (date, time,
+                                                       bigdata_component,
+                                                       AppSubmitted_perday)
+        self.jsondata_writer(json_string)
+
+    # 此方法可以后期重构
+    def dataAllwriter(self):
+        sqllist = []
+        # 字典
+        jsonfile = self.dataload_yarn_json_filenamePath
+        # "insert into table(key1, key2, key3) values(value1,value2,value3);"
+        sqlfile = open(self.dataload_yarn_sql_filenamePath, 'a', encoding="utf-8")
+        table_name = self.table_name
+        with open(jsonfile, 'r') as file:
+            dic_list = file.readlines()
+            for dic in dic_list:
+                dic = json.loads(dic)
+                keys = dic.keys()
+                values = []
+                for key in keys:
+                    value = dic["%s" % key]
+                    values.append(value)
+                # 生成一条语句：
+                key_string = ",".join(keys)
+                values_string = "'" + "','".join(values) + "'"
+                sql = "insert into %s(%s) values(%s);\n" % (table_name, key_string, values_string)
+                sqllist.append(sql)
+                # 写入sql语句到sql文件
+                sqlfile.write(sql)
+            file.close()
+        sqlfile.close()
+
+        self.dataloader.set_sqllist(sqllisted=sqllist)
+        self.dataloader.loaddata_main()
+
+    # 数据写入本地json文件
+    # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
+    def jsondata_writer(self, dicstring):
+        jsonfile = self.dataload_yarn_json_filenamePath
+        with open(jsonfile, 'a', encoding="utf-8") as file:
+            file.write(dicstring + "\n")
+            file.close()
 
 
 # 主函数逻辑
@@ -820,11 +1091,129 @@ def main_one():
     # 服务状态不正常的情况下打印提醒退出程序，此处可以编辑发送邮件提醒/短信提醒
     if rm1_state == "down":
         print("rm1 resourceManager服务疑似 down，请检查！")
+        """
+        指标：服务状态检查数据写入
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        组件服务名称	component_service
+        IP	ip
+        主机名	hostname
+        服务存活	component_service_status 0/1,0存活，1down，可以使用count来显示down的节点数
+        """
+        ip = resourmanager.rm1
+        hostname = resourmanager.rm1_hostname
+        date = resourmanager.datenowdate
+        time = resourmanager.datenowtime
+        bigdata_component = resourmanager.name
+        component_service = "resourmanager"
+        component_service_status = 1
+
+        json_string = '{"ip":"%s","hostname":"%s","date":"%s","time":"%s","bigdata_component":"%s",' \
+                      '"component_service":"%s",' \
+                      '"component_service_status":"%s"}' % (ip,
+                                                            hostname,
+                                                            date,
+                                                            time,
+                                                            bigdata_component,
+                                                            component_service,
+                                                            component_service_status)
+        resourmanager.jsondata_writer(json_string)
+
         exit(301)
+    else:
+        # 写入指标
+        print("rm1 resourceManager服务 started ！")
+        """
+        指标：服务状态检查数据写入
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        组件服务名称	component_service
+        IP	ip
+        主机名	hostname
+        服务存活	component_service_status 0/1,0存活，1down，可以使用count来显示down的节点数
+        """
+        ip = resourmanager.rm1
+        hostname = resourmanager.rm1_hostname
+        date = resourmanager.datenowdate
+        time = resourmanager.datenowtime
+        bigdata_component = resourmanager.name
+        component_service = "resourmanager"
+        component_service_status = 0
+
+        json_string = '{"ip":"%s","hostname":"%s","date":"%s","time":"%s","bigdata_component":"%s",' \
+                      '"component_service":"%s",' \
+                      '"component_service_status":"%s"}' % (ip,
+                                                            hostname,
+                                                            date,
+                                                            time,
+                                                            bigdata_component,
+                                                            component_service,
+                                                            component_service_status)
+        resourmanager.jsondata_writer(json_string)
 
     if rm2_state == "down":
         print("rm1 resourceManager服务疑似 down， 请检查！")
+        """
+        指标：服务状态检查数据写入
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        组件服务名称	component_service
+        IP	ip
+        主机名	hostname
+        服务存活	component_service_status 0/1,0存活，1down，可以使用count来显示down的节点数
+        """
+        ip = resourmanager.rm2
+        hostname = resourmanager.rm2_hostname
+        date = resourmanager.datenowdate
+        time = resourmanager.datenowtime
+        bigdata_component = resourmanager.name
+        component_service = "resourmanager"
+        component_service_status = 1
+
+        json_string = '{"ip":"%s","hostname":"%s","date":"%s","time":"%s","bigdata_component":"%s",' \
+                      '"component_service":"%s",' \
+                      '"component_service_status":"%s"}' % (ip,
+                                                            hostname,
+                                                            date,
+                                                            time,
+                                                            bigdata_component,
+                                                            component_service,
+                                                            component_service_status)
+        resourmanager.jsondata_writer(json_string)
         exit(302)
+    else:
+        # 写入指标
+        """
+        指标：服务状态检查数据写入
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        组件服务名称	component_service
+        IP	ip
+        主机名	hostname
+        服务存活	component_service_status 0/1,0存活，1down，可以使用count来显示down的节点数
+        """
+        ip = resourmanager.rm2
+        hostname = resourmanager.rm2_hostname
+        date = resourmanager.datenowdate
+        time = resourmanager.datenowtime
+        bigdata_component = resourmanager.name
+        component_service = "resourmanager"
+        component_service_status = 1
+
+        json_string = '{"ip":"%s","hostname":"%s","date":"%s","time":"%s","bigdata_component":"%s",' \
+                      '"component_service":"%s",' \
+                      '"component_service_status":"%s"}' % (ip,
+                                                            hostname,
+                                                            date,
+                                                            time,
+                                                            bigdata_component,
+                                                            component_service,
+                                                            component_service_status)
+        resourmanager.jsondata_writer(json_string)
 
     # 处理yarn-site.xml文件返回值
     # cluster_name, rm1_ip, rm2_ip = resourmanager.hdfs_site_conf()
@@ -848,7 +1237,7 @@ def main_one():
     else:
         print(
             "resourceManager HA 状态检查异常：rm1_ha_state 为 %s ;  rm2_ha_state 为 %s .请运维立即检查所有resourceManager状态，并进行恢复！" % (
-            rm1_ha_state, rm2_ha_state))
+                rm1_ha_state, rm2_ha_state))
         exit(502)
 
     # 指标：nodemanager is down（完成）
@@ -888,6 +1277,9 @@ def main_one():
 
     # 指标： 每天用户提交的作业数
     resourmanager.job_submitted_calculate()
+
+    # 数据导入到mysql
+    resourmanager.dataAllwriter()
 
 
 # 主函数

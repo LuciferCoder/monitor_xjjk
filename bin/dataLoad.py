@@ -111,18 +111,6 @@ class DATALOADER(object):
         else:
             self.use_crontab = "false"
 
-    # kerberos 认证
-    # 认证krb5
-    # 如果使用了kerberos，调用此方法
-    def krb5init(self):
-        krbconf = self.krb5conf
-        keytab_file = self.client_keytab
-        principle = self.client_keytab_principle
-        os.environ['KRB5CCNAME'] = os.path.join(self.BASE_DIR, f'keytab/krb5cc_%s' % (self.name))
-        kconfig = krbticket.KrbConfig(principal=principle, keytab=keytab_file)
-        krbticket.KrbCommand.kinit(kconfig)
-        # cont = krbticket.KrbTicket.get(keytab=keytab_file,principal=principle)
-
     # base64解密
     def password_decode(self):
         if self.use_pwd_coding == "true":
@@ -141,8 +129,7 @@ class DATALOADER(object):
         except Exception as e:
             print(e)
 
-    def loaddata_main(self):
-        # dataloader = DATALOADER()
+    def mysql_main(self):
         self.password_decode
         host = self.host
         user = self.user
@@ -161,11 +148,18 @@ class DATALOADER(object):
                                  port=port,
                                  charset=charset,
                                  sqlslist=sqlslist)
-
         mysqler.cursor_cnn()
 
         # 调用方法插入数据
         mysqler.insertdatas()
+
+    def loaddata_main(self):
+        # dataloader = DATALOADER()
+        if self.usemysql == "true":
+            self.mysql_main()
+        else:
+            # 其它数据库入库表设计，与数据库入库工具待补充
+            print("其他数据库方法，请联系研发人员补充数据入库相关的util工具")
 
 # if __name__ == '__main__':
 #     main

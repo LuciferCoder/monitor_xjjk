@@ -32,12 +32,12 @@ class MysqlUtil(object):
 
     def cursor_cnn(self):
         try:
-            print(self.host)
-            print(self.user)
-            print(self.password)
-            print(self.database)
-            print(self.port)
-            print(self.charset)
+            # print(self.host)
+            # print(self.user)
+            # print(self.password)
+            # print(self.database)
+            # print(self.port)
+            # print(self.charset)
 
             conn = pymysql.connect(host=self.host,
                                    user=self.user,
@@ -45,14 +45,14 @@ class MysqlUtil(object):
                                    database=self.database,
                                    port=int(self.port),
                                    charset=self.charset)
-            print("连接成功")
+            # print("连接成功")
             # 创建游标
             cursor = conn.cursor()
             # return cursor, conn
             self.cursor = cursor
             self.conn = conn
         except Exception as e:
-            print("cursor_cnn")
+            # print("cursor_cnn")
             print(e)
 
     # 批量添加数据
@@ -64,13 +64,13 @@ class MysqlUtil(object):
         try:
             for sql in self.sqlslist:
                 cursor.execute(sql)
-                print("cursor")
-                print(cursor)
+                # print("cursor")
+                # print(cursor)
                 conn.commit()
-            print("insert complete...")
+            # print("insert complete...")
             self.closeconn()
         except Exception as e:
-            print("insertdatas")
+            # print("insertdatas")
             print(e)
             # conn.rollback()
             # self.closeconn()

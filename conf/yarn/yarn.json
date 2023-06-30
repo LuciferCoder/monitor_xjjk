@@ -18,17 +18,21 @@
       "client_principle": "hdfs/ocean@JD.COM"
     },
     "hadoop_nodes": {
-      "namenode": {
+       "namenode": {
         "nn1": "10.0.0.47",
         "nn1_port": "50470",
+        "nn1_hostname": "ocean-bigdata-1a-21",
         "nn2": "10.0.0.45",
-        "nn2_port": "50470"
+        "nn2_port": "50470",
+        "nn2_hostname": "ocean-bigdata-1a-20"
       },
       "resourcemanager": {
         "rm1": "10.0.0.47",
         "rm1_port": "8088",
+        "rm1_hostname": "ocean-bigdata-1a-21",
         "rm2": "10.0.0.42",
-        "rm2_port": "8088"
+        "rm2_port": "8088",
+        "rm2_hostname": "ocean-bigdata-1a-22"
       },
       "datanode": ["10.0.0.48","10.0.0.40","10.0.0.44","10.0.0.41","10.0.0.43","10.0.0.39","10.0.0.46"],
       "nodemanager": [
