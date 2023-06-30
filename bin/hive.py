@@ -583,17 +583,8 @@ class HIVER(object):
                 # 生成一条语句：
                 key_string = ",".join(keys)
                 values_string = "'"+"','".join(values)+"'"
-                #
-                # print("key_string: ")
-                # print(key_string)
-                #
-                # print("values_string: ")
-                # print(values_string)
-
                 sql = "insert into %s(%s) values(%s);\n" % (table_name, key_string, values_string)
-
                 sqllist.append(sql)
-
                 # 写入sql语句到sql文件
                 sqlfile.write(sql)
             file.close()

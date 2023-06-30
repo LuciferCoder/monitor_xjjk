@@ -54,6 +54,8 @@ class DATALOADER(object):
         self.datalaod_yarn_json = datalaod_yarn_json
         self.datalaod_yarn_sql = datalaod_yarn_sql
 
+
+
         self.table_name = table_name
         self.charset = charset
 
@@ -89,38 +91,8 @@ class DATALOADER(object):
             datalaod_hdfs_sql = load_dict["dependencies"]["mysql"]["dataload_hdfs"]["sql"]
             datalaod_yarn_json = load_dict["dependencies"]["mysql"]["dataload_yarn"]["json_dic"]
             datalaod_yarn_sql = load_dict["dependencies"]["mysql"]["dataload_yarn"]["sql"]
-             # =
 
-            # # 集群名称
-            # cluster_name = load_dict["dependencies"]["config"]["cluster_name"]
-            #
-            # # hive-site.xml
-            # hiveconf = load_dict["dependencies"]["config"]["hivesconf"]
-            #
-            # # 集群是否使用了kerberos
-            # use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
-            #
-            # # Kerberos相关配置
-            # krb5conf = load_dict["dependencies"]["kerberos"]["krb5conf"]
-            # client_keytab = load_dict["dependencies"]["kerberos"]["keytab"]
-            # client_keytab_principle = load_dict["dependencies"]["kerberos"]["client_principle"]
-            #
-            # # 集群节点信息
-            # # 赶工期，目前支持key部署，密钥免密
-            # ssh_user = load_dict["dependencies"]["config"]["ssh_user"]
-            # ssh_pkey = load_dict["dependencies"]["config"]["ssh_pkey"]
-            #
-            # ##hiveserver2 node list
-            # hiveserver2_node_list = load_dict["dependencies"]["hivenodes"]["hiveserver2"]["hiveserverNodes"]
-            # hiveserver2_node_port = load_dict["dependencies"]["hivenodes"]["hiveserver2"]["hiveserverPort"]
-            #
-            # ##hive metastore node list
-            # metastore_node_list = load_dict["dependencies"]["hivenodes"]["metastore"]["metastoreNodes"]
-            # metastore_node_port = load_dict["dependencies"]["hivenodes"]["metastore"]["metastorePort"]
-            #
-            # return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
-            #     use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-            #     metastore_node_list, metastore_node_port
+
             return name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
                 password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
                 datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql,table_name,charset

@@ -43,27 +43,6 @@ import subprocess
 2、执行hdfs的命令
 """
 
-"""
-from pyhive import hive
-from krbcontext.context import krbContext
-
-
-with krbContext(using_keytab=True, principal="ocean/ocean@JD.COM", keytab_file="/root/ocean.keytab"):
-  cnn=hive.Connection(host='10.0.0.45', port=10000, database='ods', auth="KERBEROS", kerberos_service_name='hive')
-  cursor=cnn.cursor()
-  stmt="select * from ods_my49_tbnd_a_d"
-  cursor.execute(stmt) 
-  data=cursor.fetchall()
-  cnn.close()
-  for result in data:
-    print(result)
-
-# 李冬亮
-# 03月24日 00:08
-# @袁慧 你明天白天测试的时候仿照这个案例去测试，principal="ocean/ocean@JD.COM", keytab_file="/root/ocean.keytab" 改成对应环境的值，
-# cnn=hive.Connection(host='10.0.0.45', port=10000, database='ods' 这里面的值改成对应环境值，测试一下；有问题明天及时发到群里
-"""
-
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -75,14 +54,19 @@ from conf import Logger as Logger
 
 # warnings.filterwarnings('ignore')
 
+# 数据导入到mysql
+import dataLoad
 
-class HDFSCHECk():
+
+class HDFSCHECk(object):
 
     def __init__(self):
         self.BASE_DIR = BASE_DIR
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/hdfs/hdfs.json"
-        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey = self._json_parse()
+        name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, \
+            nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
+            nn1_hostname, nn2_hostname = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -93,6 +77,9 @@ class HDFSCHECk():
         self.nn2 = nn2
         self.nn1_port = nn1_port
         self.nn2_port = nn2_port
+        self.nn1_hostname = nn1_hostname
+        self.nn2_hostname = nn2_hostname
+
         self.datanode_list = datanode_list
         self.hdfsconf = hdfsconf
         self.hdfsconf_path = os.path.dirname(self.jsonfile_path) + "/" + self.hdfsconf
@@ -123,6 +110,31 @@ class HDFSCHECk():
         self.ssh_user = ssh_user
         self.ssh_pkey = ssh_pkey
 
+        # mysql表字段
+        self.datenowdate = self.datenow.strftime("%Y%m%d")
+        self.datenowtime = self.datenow.strftime("%H%M%S")
+        # 数据写入本地，并导入mysql
+        self.threadnum_list = []
+        # 初始化dataload对象
+        self.dataloader = dataLoad.DATALOADER()
+
+        self.dataload_hdfs_json_dir = self.dataloader.datalaod_hdfs_json
+        self.dataload_hdfs_json_dir_abs = BASE_DIR + self.dataload_hdfs_json_dir
+        self.dataload_hdfs_json_filenamePath = self.dataload_hdfs_json_dir_abs + "/%s_hdfs_dml.json" % self.datenowstring
+
+        self.dataload_hdfs_sql_dir = self.dataloader.datalaod_hdfs_sql
+        self.dataload_hdfs_sql_dir_abs = BASE_DIR + self.dataload_hdfs_sql_dir
+        self.dataload_hdfs_sql_filenamePath = self.dataload_hdfs_sql_dir_abs + "/%s_hdfs_dml.sql" % self.datenowstring
+
+        self.table_name = self.dataloader.table_name
+        # 指标值字典列表，用于dataLoad生成语句
+
+        # # 指标字段整合
+        # ## hdfs 使用率  hdfs_usage
+        # self.hdfs_usage=""
+        # ## NameNode堆内存使用率 heap_usage
+        # self.Namenode_HeapUsage=""
+
     # 解析配置文件，获取hadoop节点信息(已完成，内部返回类中的变量使用)
     def _json_parse(self):
         with open(self.jsonfile_path, 'r') as jsonfile:
@@ -141,7 +153,6 @@ class HDFSCHECk():
             # 集群是否使用了kerberos
             use_kerberos = load_dict["dependencies"]["config"]["use_kerberos"]
 
-
             # Kerberos相关配置
             krb5conf = load_dict["dependencies"]["kerberos"]["krb5conf"]
             client_keytab = load_dict["dependencies"]["kerberos"]["keytab"]
@@ -151,8 +162,10 @@ class HDFSCHECk():
             ## nn
             nn1 = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn1"]
             nn1_port = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn1_port"]
+            nn1_hostname = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn1_hostname"]
             nn2 = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn2"]
             nn2_port = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn2_port"]
+            nn2_hostname = load_dict["dependencies"]["hadoop_nodes"]["namenode"]["nn2_hostname"]
 
             ssh_user = load_dict["dependencies"]["config"]["ssh_user"]
             ssh_pkey = load_dict["dependencies"]["config"]["ssh_pkey"]
@@ -169,7 +182,9 @@ class HDFSCHECk():
             ##nodemanager
             # nodemanager_list = load_dict["dependencies"]["hadoop_nodes"]["nodemanager"]
 
-            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey
+            return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, \
+                nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
+                nn1_hostname, nn2_hostname
 
     # 认证krb5
     # 如果使用了kerberos，调用此方法
@@ -182,7 +197,6 @@ class HDFSCHECk():
         krbticket.KrbCommand.kinit(kconfig)
         # cont = krbticket.KrbTicket.get(keytab=keytab_file,principal=principle)
 
-
     # hdfs 健康检查
     """
    HDFS健康的标准:如果所有的文件满足最小副本的要求，那么就认为文件系统是健康的。
@@ -190,6 +204,22 @@ class HDFSCHECk():
     """
 
     def hdfs_health_check(self):
+
+        # 指标json字段
+        """
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        hdfs_健康检查（1/-1）(健康、不健康)	hdfs_healthy
+
+        :return:
+        """
+        date = self.datenowdate
+        time = self.datenowtime
+        # hdfs
+        bigdata_component = self.name
+        hdfs_healthy = 0
+
         try:
             hdfsconfpath = self.hdfsconf_path
             cmd = "hdfs fsck -conf %s /" % hdfsconfpath
@@ -199,11 +229,10 @@ class HDFSCHECk():
             filename = "/conf/hdfs/%sfsck.log" % self.datenowstring
             file_path = BASE_DIR + filename
 
-            with open(file_path, 'w',encoding="utf-8") as file:
+            with open(file_path, 'w', encoding="utf-8") as file:
                 # file.write(foo.read())
                 file.write(foo)
                 file.close()
-
 
             with open(file_path, 'r', encoding="utf-8") as foo:
                 for lin in foo.readlines():
@@ -216,8 +245,18 @@ class HDFSCHECk():
                         # hdfs_path_state = "CORRUPT"
                         if hdfs_path_state == "HEALTHY":
                             print("HDFS路径 %s 健康状态检查结果为 %s" % (hdfs_path, hdfs_path_state))
+                            hdfs_healthy = 1
+                            json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","hdfs_healthy":"%s"}' % (
+                                date, time, bigdata_component, str(hdfs_healthy))
+                            self.jsondata_writer(json_string)
+
                         else:
-                            print("HDFS路径 %s 健康状态检查结果为 %s , 请检查hdfs块信息健康状态并进行处理!!!" % (hdfs_path, hdfs_path_state))
+                            print("HDFS路径 %s 健康状态检查结果为 %s , 请检查hdfs块信息健康状态并进行处理!!!" % (
+                                hdfs_path, hdfs_path_state))
+                            hdfs_healthy = -1
+                            json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","hdfs_healthy":"%s"}' % (
+                                date, time, bigdata_component, str(hdfs_healthy))
+                            self.jsondata_writer(json_string)
 
                     # 抓取hdfsnode数量：
                     if "Number of data-nodes:" in lin:
@@ -312,13 +351,11 @@ class HDFSCHECk():
         else:
             print("nn1 ip is not in same, fale. 请检查配置文件中nn1与hdfs-site.xml文件中配置")
 
-
         if nn2_clustername_from_hdfssite == self.nn2:
             # print("nn2 is in same, ok.")
             pass
         else:
             print("nn2 ip is not in same, fale. 请检查配置文件中nn2与hdfs-site.xml文件中配置")
-
 
         # 检查通过，则进行下一步 ,调用 namenode_api_info
         jsoncont_all_cont1, jsoncont_all_cont2 = self.namenode_api_info(nn1_clustername_from_hdfssite,
@@ -394,11 +431,11 @@ class HDFSCHECk():
 
     """
 
-
     """
     namenode_ha 状态：
     
     """
+
     def nn_ha_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
@@ -414,12 +451,44 @@ class HDFSCHECk():
                 ha_state = dic["tag.HAState"]
                 return ha_state
 
-
     def nn_jmx_analyse(self, jmx_cont):
         # jmx_content = jmx_cont
         jmx_content = jmx_cont
         jmx_content = json.loads(jmx_content)
         beans = jmx_content["beans"]
+
+        """
+        指标值 json字符记录
+        日期	date
+        时间	time
+        大数据组件名称	bigdata_component
+        组件服务名称	component_service
+        IP	ip
+        主机名	hostname
+        
+        datenode:
+        存活节点数	alive_nodes
+        集群节点数(Dead Nodes )	dead_nodes
+        hdfs使用率	hdfs_usage
+        堆内存使用率	heap_usage
+
+        
+        集群DN节点磁盘	volume_failure
+        """
+        namenode_heap_used_percent = None
+        PercentUsed = None
+        LiveNodes = None
+        livenodes_num=None
+        DeadNodes = None
+        VolumeFailuresTotal = None
+        # 已使用的大小
+        CapacityUsedGB=None
+
+        date = self.datenowdate
+        time = self.datenowtime
+        bigdata_component = self.name
+
+
         # print(beans)
         for dic in beans:
             # 开始取指标
@@ -435,7 +504,6 @@ class HDFSCHECk():
                 MemHeapCommittedM = dic["MemHeapCommittedM"]
                 # 百分比计算
                 namenode_heap_used_percent = "{:.2%}".format(MemHeapUsedM / MemHeapCommittedM)
-
 
                 # 测试判断逻辑
                 # namenode_heap_used_percent = "77.49%"
@@ -499,8 +567,8 @@ class HDFSCHECk():
                 deadnnode_num = len(hosts)
                 print("DeadNodes 数量： %s" % (deadnnode_num))
 
-
                 """
+                指标打印
                 datanode is down
                 """
                 deadnnode_list = []
@@ -549,6 +617,28 @@ class HDFSCHECk():
                 CapacityUsed = dic["CapacityUsed"]
                 CapacityUsedGB = int(CapacityUsed) / 1024 / 1024 / 1024
                 self.curday_cap = CapacityUsedGB
+
+        # 写入指标json文件
+        hdfs_usage = PercentUsed
+        # alive_nodes = LiveNodes
+        alive_nodes = livenodes_num
+        dead_nodes = DeadNodes
+        volume_failure = VolumeFailuresTotal
+        heap_usage = namenode_heap_used_percent
+
+        # 集群指标
+        json_string = '{"hdfs_usage":"%s","alive_nodes":"%s","dead_nodes":"%s","volume_failure":"%s",' \
+                      '"heap_usage":"%s","date":"%s","time":"%s","bigdata_component":"%s"}' % (
+            hdfs_usage,
+            alive_nodes,
+            dead_nodes,
+            volume_failure,
+            heap_usage,
+            date,
+            time,
+            bigdata_component
+        )
+        self.jsondata_writer(json_string)
 
     """
     指标抓取单项检查：
@@ -615,7 +705,7 @@ class HDFSCHECk():
         keyfile_path = self.ssh_pkey
 
         nn_ssh_result = self.ssh_connect(ip=ip, port=22, password="", use_pwd="false", ssh_keyfile=keyfile_path,
-                                          user=user, cmd=pswc_cmd)
+                                         user=user, cmd=pswc_cmd)
         socket_ck_re = self.socket_check(ip=ip, port=port)
         # 此处逻辑：
         # 服务存在且端口正验证正常视为Namenode正常
@@ -626,7 +716,6 @@ class HDFSCHECk():
         else:
             print("IP: %s 上的NameNode服务状态：Down" % namenode_ip)
             return "down"
-
 
     # 分析参数确定是否手动执行
     def arg_analyse(self):
@@ -647,8 +736,10 @@ class HDFSCHECk():
     # 手动执行取定时任务获取的hdfs增长量(打印截止时间： 示例：日期时分秒_crontab_hdfs_capcity.json)
     # 文件检查前一天的时分是否存在,定时任务运行时,获取前一天的文件记录的变量值
     """
+    指标:hdfs增长量
     计算 HDFS日增长
     """
+
     def diff_of_hdfsAdded(self):
         # 前一天文件路径
         # 定时任务执行
@@ -673,6 +764,10 @@ class HDFSCHECk():
         # 定时任务执行时
         # 本地测试
         # use_crontab = "true"
+
+        date = self.datenowdate
+        time = self.datenowtime
+
         if use_crontab == "true":
             # 判断前一天文件在不在
             # 如果文件存在，读取前一天文件值，进行计算
@@ -712,6 +807,22 @@ class HDFSCHECk():
                     f.write(dic)
                     f.close()
 
+                """
+                增长量指标写入数据库
+                大数据组件名称	bigdata_component
+                hdfs_added
+                """
+                # 集群指标
+                bigdata_component = self.name
+                hdfs_added = hdfs_cap_added
+                json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
+                                  date,
+                                  time,
+                                  hdfs_added,
+                                  bigdata_component
+                              )
+                self.jsondata_writer(json_string)
+
             else:
                 # 如果不存在，写入当前获取的数据到当前日期的文件中，跳过计算，设置/返回增长量为当前获取的hdfs ca指标数值
                 # print(file_exsited.__str__())
@@ -731,6 +842,22 @@ class HDFSCHECk():
                     # json.dump(dic, f)
                     f.write(dic)
                     f.close()
+
+                """
+                增长量指标写入数据库
+                大数据组件名称	bigdata_component
+                hdfs_added
+                """
+                # 集群指标
+                bigdata_component = self.name
+                hdfs_added = 0
+                json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
+                                  date,
+                                  time,
+                                  hdfs_added,
+                                  bigdata_component
+                              )
+                self.jsondata_writer(json_string)
 
         # 判定为手动执行， false时
         else:
@@ -784,6 +911,22 @@ class HDFSCHECk():
                 hdfs_cap_added = float(curday_cap_str.replace("GB", "")) - float(lastday_cap.replace("GB", ""))
                 # 手动执行脚本模式，打印增长量到console
                 print("HFDS增长量为: %sGB" % hdfs_cap_added)
+
+                """
+                增长量指标写入数据库
+                大数据组件名称	bigdata_component
+                hdfs_added
+                """
+                # 集群指标
+                bigdata_component = self.name
+                hdfs_added = hdfs_cap_added
+                json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
+                                  date,
+                                  time,
+                                  hdfs_added,
+                                  bigdata_component
+                              )
+                self.jsondata_writer(json_string)
             else:
                 # 如果不存在，则视为第一次运行
                 # print("file_exsited.__str__() --> " + file_exsited.__str__())
@@ -797,6 +940,61 @@ class HDFSCHECk():
                 curday_cap_str = "{:.2%}".format(curday_cap / 100).replace("%", "GB")
                 print("前一天文件不存在,当前HDFS使用量为： %s " % curday_cap_str)
                 # hdfs_cap_added = curday_cap_str
+                """
+                增长量指标写入数据库
+                大数据组件名称	bigdata_component
+                hdfs_added
+                """
+                # 集群指标
+                bigdata_component = self.name
+                hdfs_added = 0
+                json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
+                                  date,
+                                  time,
+                                  hdfs_added,
+                                  bigdata_component
+                              )
+                self.jsondata_writer(json_string)
+
+    def dataAllwriter(self):
+        sqllist = []
+        # 字典
+        jsonfile = self.dataload_hdfs_json_filenamePath
+        # "insert into table(key1, key2, key3) values(value1,value2,value3);"
+        sqlfile = open(self.dataload_hdfs_sql_filenamePath, 'a', encoding="utf-8")
+        table_name = self.table_name
+        with open(jsonfile, 'r') as file:
+            dic_list = file.readlines()
+            for dic in dic_list:
+                dic = json.loads(dic)
+                keys = dic.keys()
+                values = []
+                for key in keys:
+                    value = dic["%s" % key]
+                    values.append(value)
+                # 生成一条语句：
+                key_string = ",".join(keys)
+                values_string = "'" + "','".join(values) + "'"
+
+                sql = "insert into %s(%s) values(%s);\n" % (table_name, key_string, values_string)
+
+                sqllist.append(sql)
+
+                # 写入sql语句到sql文件
+                sqlfile.write(sql)
+            file.close()
+        sqlfile.close()
+
+        self.dataloader.set_sqllist(sqllisted=sqllist)
+        self.dataloader.loaddata_main()
+
+    # 数据写入本地json文件
+    # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
+    def jsondata_writer(self, dicstring):
+        jsonfile = self.dataload_hdfs_json_filenamePath
+        with open(jsonfile, 'a', encoding="utf-8") as file:
+            file.write(dicstring + "\n")
+            file.close()
 
 
 # 主函数逻辑
@@ -805,9 +1003,54 @@ def main_one():
     checker = HDFSCHECk()
     # 初始化分析参数，完成use_crontab值的内部变量赋值
     checker.arg_analyse()
-    # 测试namenode
+
+    """
+    日期	date
+    时间	time
+    大数据组件名称	bigdata_component
+    组件服务名称	component_service
+    服务存活	component_service_status
+    IP	ip
+    主机名	hostname
+    """
+    date = checker.datenowdate
+    time = checker.datenowtime
+    bigdata_component = checker.name
+    component_service = "namenode"
+    ip = ""
+    component_service_status = ""
+    hostname = ""
+
+    # 测试namenode服务存活
+    # nn1
     nn1_state = checker.Namenode_is_down(checker.nn1, checker.nn1_port)
+    component_service_status = nn1_state
+    ip = checker.nn1
+    hostname = checker.nn1_hostname
+    json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+                  '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
+                                                                                  time,
+                                                                                  bigdata_component,
+                                                                                  component_service,
+                                                                                  ip,
+                                                                                  component_service_status,
+                                                                                  hostname)
+    checker.jsondata_writer(json_string)
+
+    # nn2
     nn2_state = checker.Namenode_is_down(checker.nn2, checker.nn2_port)
+    component_service_status = nn2_state
+    ip = checker.nn2
+    hostname = checker.nn2_hostname
+    json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+                  '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
+                                                                                  time,
+                                                                                  bigdata_component,
+                                                                                  component_service,
+                                                                                  ip,
+                                                                                  component_service_status,
+                                                                                  hostname)
+    checker.jsondata_writer(json_string)
 
     # 服务状态不正常的情况下打印提醒退出程序，此处可以编辑发送邮件提醒/短信提醒
     if nn1_state == "down":
@@ -826,27 +1069,109 @@ def main_one():
     # 分析jmx指标，打印指标状态
     # nn_jmx_analyse
     # nn1 jmx
+    """
+    日期	date
+    时间	time
+    大数据组件名称	bigdata_component
+    组件服务名称	component_service
+    Namenode HA的状态	namenode_ha_status 1/2,1为active，2为standby
+    IP	ip
+    主机名	hostname
+    """
+    date = checker.datenowdate
+    time = checker.datenowtime
+    bigdata_component = checker.name
+    component_service = "namenode"
+    ip = ""
+    hostname = ""
+    namenode_ha_status = 0
+
     nn1_ha_state = checker.nn_ha_analyse(checker.nn1_jmx)
     nn2_ha_state = checker.nn_ha_analyse(checker.nn2_jmx)
 
     # 判断active，抓取指标
-    if nn1_ha_state == "active" and nn2_ha_state =="standby":
+    if nn1_ha_state == "active" and nn2_ha_state == "standby":
+        # 1 是active
+        namenode_ha_status = 1
+        ip = checker.nn1
+        hostname = checker.nn1_hostname
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+                      '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
+                                                                                      time,
+                                                                                      bigdata_component,
+                                                                                      component_service,
+                                                                                      ip,
+                                                                                      namenode_ha_status,
+                                                                                      hostname)
+        checker.jsondata_writer(json_string)
+
+        # 2 是standby
+        namenode_ha_status = 2
+        ip = checker.nn2
+        hostname = checker.nn2_hostname
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+                      '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
+                                                                                      time,
+                                                                                      bigdata_component,
+                                                                                      component_service,
+                                                                                      ip,
+                                                                                      namenode_ha_status,
+                                                                                      hostname)
+
+        checker.jsondata_writer(json_string)
+
         jmx_cont = checker.nn1_jmx
         checker.nn_jmx_analyse(jmx_cont)
-    elif nn1_ha_state == "standby" and nn2_ha_state =="active":
+    elif nn1_ha_state == "standby" and nn2_ha_state == "active":
+        # 1 是active
+        namenode_ha_status = 2
+        ip = checker.nn1
+        hostname = checker.nn1_hostname
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+                      '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
+                                                                                      time,
+                                                                                      bigdata_component,
+                                                                                      component_service,
+                                                                                      ip,
+                                                                                      namenode_ha_status,
+                                                                                      hostname)
+        checker.jsondata_writer(json_string)
+
+        # 2 是standby
+        namenode_ha_status = 1
+        ip = checker.nn2
+        hostname = checker.nn2_hostname
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+                      '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
+                                                                                      time,
+                                                                                      bigdata_component,
+                                                                                      component_service,
+                                                                                      ip,
+                                                                                      namenode_ha_status,
+                                                                                      hostname)
+
+        checker.jsondata_writer(json_string)
+
         jmx_cont = checker.nn2_jmx
         checker.nn_jmx_analyse(jmx_cont)
     else:
-        print("namenode HA 状态检查异常：nn1_ha_state 为 %s ;  nn2_ha_state 为 %s .请运维立即检查所有Namenode状态，并进行恢复")
+        print(
+            "namenode HA 状态检查异常：nn1_ha_state 为 %s ;  nn2_ha_state 为 %s .请运维立即检查所有Namenode状态，并进行恢复")
         exit(502)
 
     # hdfs 增长
     checker.diff_of_hdfsAdded()
 
+    # 指标数据库上传
+
     # 进行健康检查
     if checker.use_kerberos == "true":
         checker.krb5init()
+
     checker.hdfs_health_check()
+
+    # 指标数据导入数据库
+    checker.dataAllwriter()
 
 
 if __name__ == '__main__':
