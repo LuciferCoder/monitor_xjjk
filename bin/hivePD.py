@@ -183,6 +183,7 @@ class HIVER(object):
 
     # 所有节点连通性检查，端口探活
     def IsAlivedNode(self):
+        print("调用 isalived 成功")
         # hiveserver2
         hivesevrer2_node_isalived_list = []
         hiverserver2_port = self.hiveserver2_node_port
@@ -216,8 +217,14 @@ class HIVER(object):
     # 打印down的服务
     # 指标：服务端口探活
     def screeOownServices(self):
+        print("调用打印服务")
         hivesevrer2_node_isalived_list = self.hivesevrer2_node_isalived_list
         metastore_node_isalived_list = self.metastore_node_isalived_list
+
+        print("hivesevrer2_node_isalived_list")
+        print(hivesevrer2_node_isalived_list)
+        print("metastore_node_isalived_list")
+        print(metastore_node_isalived_list)
 
         # 数据写入字段：
         # 服务：bigdata_component
@@ -556,6 +563,36 @@ class HIVER(object):
         self.metastoreNode_jmx_result = metastoreNode_jmx_result
         self.threadnum_list = threadnum_list
 
+        # 调用函数
+        self.screnn_hiveserver2_jmx_re()
+        self.screnn_metastore_jmx_re()
+
+    # screen hiveserver2 jmx result
+    def screnn_hiveserver2_jmx_re(self):
+        # '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}'
+        hiveserverNode_jmx_result = self.hiveserverNode_jmx_result
+        for node in hiveserverNode_jmx_result:
+            node_json = json.loads(node)
+            hostname = node_json["hostname"]
+            ip = node_json["ip"]
+            gctimevalue = node_json["gctimevalue"]
+            heapusage = node_json["heapusage"]
+            print("主机 %s, IP %s 上的 HievServer2 服务的 GC时间：%s, 内存使用率：%s" % (
+                hostname, ip, gctimevalue, heapusage))
+
+    # screen hiveserver2 jmx result
+    def screnn_metastore_jmx_re(self):
+        # '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}'
+        metastoreNode_jmx_result = self.metastoreNode_jmx_result
+        for node in metastoreNode_jmx_result:
+            node_json = json.loads(node)
+            hostname = node_json["hostname"]
+            ip = node_json["ip"]
+            gctimevalue = node_json["gctimevalue"]
+            heapusage = node_json["heapusage"]
+            print("主机 %s, IP %s 上的HievMetastore服务的GC时间：%s, 内存使用率：%s" % (
+                hostname, ip, gctimevalue, heapusage))
+
     # 指标： Hvieserver2的连接客户端数量
     def hiveserver_client_num(self):
         threadnum_list = self.threadnum_list
@@ -644,6 +681,7 @@ def main_one():
         hiver.krb5init()
 
     # 组件状态（大数据端口探活警告）
+    print("is alived start")
     hiver.IsAlivedNode()
 
     hiver.hivejmx()
