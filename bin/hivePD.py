@@ -221,10 +221,10 @@ class HIVER(object):
         hivesevrer2_node_isalived_list = self.hivesevrer2_node_isalived_list
         metastore_node_isalived_list = self.metastore_node_isalived_list
 
-        print("hivesevrer2_node_isalived_list")
-        print(hivesevrer2_node_isalived_list)
-        print("metastore_node_isalived_list")
-        print(metastore_node_isalived_list)
+        # print("hivesevrer2_node_isalived_list")
+        # print(hivesevrer2_node_isalived_list)
+        # print("metastore_node_isalived_list")
+        # print(metastore_node_isalived_list)
 
         # 数据写入字段：
         # 服务：bigdata_component
@@ -371,7 +371,7 @@ class HIVER(object):
             service_pid = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             service_pid = service_pid.decode()
 
-            cmd = "source /etc/profile;jmap -heap %s" % service_pid
+            cmd = "source /etc/profile;sudo ${JAVA_HOME}/bin/jmap -heap %s" % service_pid
             heap_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             heap_cont = heap_cont.decode()
 
@@ -486,7 +486,7 @@ class HIVER(object):
             service_pid = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             service_pid = service_pid.decode()
 
-            cmd = "source /etc/profile;jmap -heap %s" % service_pid
+            cmd = "source /etc/profile;sudo ${JAVA_HOME}/bin/jmap -heap %s" % service_pid
             heap_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             heap_cont = heap_cont.decode()
 
@@ -518,7 +518,7 @@ class HIVER(object):
             heapusage = usage
 
             # gc time
-            cmd = " source /etc/profile;jstat -gcutil %s 5000 1" % service_pid
+            cmd = " source /etc/profile;sudo ${JAVA_HOME}/bin/jstat -gcutil %s 5000 1" % service_pid
             gc_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             # gc_time = int(.strip().split()[-2])
             gc_contl = str(gc_cont).strip().split("\\n")[1]
