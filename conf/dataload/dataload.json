@@ -13,29 +13,6 @@
       "ssh_user": "root",
       "ssh_pkey": "/root/.ssh/id_rsa"
     },
-    "kerberos": {
-      "krb5conf": "/etc/krb5.conf",
-      "keytab": "/export/kerberos/1/hive.keytab",
-      "client_principle": "hive/ocean@JD.COM"
-    },
-    "hivenodes": {
-      "hiveserver2": {
-        "hiveserverNodes": [
-          {"hostname": "ocean-bigdata-1a-21","ip": "10.0.0.47"},
-          {"hostname": "ocean-bigdata-1a-22","ip": "10.0.0.42"},
-          {"hostname": "ocean-bigdata-1a-20","ip": "10.0.0.45"}
-        ],
-        "hiveserverPort": "10002"
-      },
-      "metastore": {
-        "metastoreNodes": [
-          {"hostname": "ocean-bigdata-1a-21","ip": "10.0.0.47"},
-          {"hostname": "ocean-bigdata-1a-22","ip": "10.0.0.42"},
-          {"hostname": "ocean-bigdata-1a-20","ip": "10.0.0.45"}
-        ],
-        "metastorePort": "9083"
-      }
-    },
     "mysql": {
       "use_pwd_coding": "false",
       "user": "root",

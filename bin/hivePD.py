@@ -1,6 +1,7 @@
 #!/bin/env python3
 # -*- coding: utf-8 -*-
 # date: 2023年6月25日19:58:38
+# 要求 hiveserver开启web ui，如果漏洞原因关闭了 hive的web ui则使用脚本 hivePD.py进行指标抓取
 
 import warnings
 
@@ -351,26 +352,65 @@ class HIVER(object):
             hostname = node_json["hostname"]
             gctimevalue = ""
             heapusage = ""
-            urlcmd = "curl -s http://%s:%s/jmx?qry=metrics:*" % (ip, hivesevrer2_port)
-            # print(urlcmd)
-            result = os.popen(urlcmd)
-            result_cont = result.read()
-            # print(result_cont)
-            result_json = json.loads(result_cont)
-            beans = result_json["beans"]
-            threadnum = 0
-            for bean in beans:
 
-                bean_json = bean
-                name = bean_json["name"]
-                if name == "metrics:name=gc.PS-MarkSweep.time":
-                    gctimevalue = bean_json["Value"]
-                elif name == "metrics:name=memory.heap.usage":
-                    heapusage = bean_json["Value"]
-                    # print(heapusage)
-                elif name == "metrics:name=threads.count":
-                    threadnum = bean_json["Value"]
-                    # threadnum_list.append()
+            port = 22
+            user = self.ssh_user
+            password = ""
+            use_pwd = "false"
+            ssh_keyfile = self.ssh_pkey
+
+            cmd = "ps -ef |grep org.apache.hive.service.server.HiveServer2|grep -v grep|awk '{print $2}'"
+
+            service_pid = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
+            service_pid = service_pid.decode()
+
+            cmd = "source /etc/profile;jmap -heap %s" % service_pid
+            heap_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
+            heap_cont = heap_cont.decode()
+
+            # print("heap_cont")
+            # print(heap_cont)
+            usedlist = []
+            MaxHeapSize = ""
+            heap_cont_list = str(heap_cont).split("\n")
+            # print("heap_cont_list")
+            # print(heap_cont_list)
+            for st in heap_cont_list:
+                if "MaxHeapSize" in st:
+                    MaxHeapSize = st.strip().split()[2]
+                if "used" in st:
+                    stlist = st.strip().split()
+                    if len(stlist) == 4:
+                        used = stlist[2]
+                        usedlist.append(used)
+            # print("MaxHeapSize")
+            # print(MaxHeapSize)
+            # print(type(MaxHeapSize))
+
+            # 计算 heapuse
+            used = 0
+            for use in usedlist:
+                used += float(use)
+            # 使用率 "{:.2%}".format(curday_cap / 100).replace("%", "GB")
+            usage = '{:.2%}'.format(float(used) / float(int(MaxHeapSize)))
+            heapusage = usage
+
+            # gc time
+            cmd = " source /etc/profile;jstat -gcutil %s 5000 1" % service_pid
+            gc_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
+            # gc_time = int(.strip().split()[-2])
+            gc_contl = str(gc_cont).strip().split("\\n")[1]
+            gc_time = gc_contl.strip().split()[-2]
+
+            # 计算
+            gctime = float(gc_time) * 1000
+            gctimevalue = gctime
+
+            # 组合字符串
+            json_str = '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}' \
+                       % (hostname, ip, gctimevalue, heapusage)
+
+            hiveserverNode_jmx_result.append(json_str)
 
             # dataload写入字符串
             # 数据写入字段：
@@ -384,7 +424,8 @@ class HIVER(object):
             # 主机名：hostname
             # Hvieserver2的连接客户端数量：client_num
 
-            heapusage = '{:.2%}'.format(float(heapusage))
+            heapusage = heapusage
+            # heapusage = '{:.2%}'.format(float(heapusage))
             # heapusage = '{:.2%}'.format(heapusage)
             bigdata_component = self.name
             component_service = "hiveserver2"
@@ -394,7 +435,12 @@ class HIVER(object):
             heap_usage = heapusage
             ip = ip
             hostname = hostname
-            client_num = threadnum
+            client_num = 0
+
+            cmdwcclient = "netstat -lantup |grep 10000|grep ESTABLISHED|wc -l"
+            client_num_encode = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmdwcclient)
+            client_num = client_num_encode.decode().strip()
+
             json_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","gctime":"%s","heap_usage":"%s","ip":"%s","hostname":"%s","client_num":"%s"}' % \
                           (bigdata_component, component_service, date, time, gctime, heap_usage, ip, hostname,
                            client_num)
@@ -406,6 +452,8 @@ class HIVER(object):
 
             hiveserverNode_jmx_result.append(json_str)
             # usage = '{:.2%}'.format(float(used) / float(int(MaxHeapSize)))
+
+            threadnum = client_num
 
             # 客户端连接数
             json_nu_str = '{"hostname":"%s", "ip":"%s", "threadnum":"%s"}' \
@@ -479,7 +527,6 @@ class HIVER(object):
 
             metastoreNode_jmx_result.append(json_str)
 
-            """            
             # dataload写入字符串
             # 数据写入字段：
             # 服务：bigdata_component
@@ -491,7 +538,6 @@ class HIVER(object):
             # IP: ip
             # 主机名：hostname
             # Hvieserver2的连接客户端数量：client_num
-            """
             bigdata_component = self.name
             component_service = "metastore"
             date = self.datenowdate
@@ -501,8 +547,7 @@ class HIVER(object):
             ip = ip
             hostname = hostname
             client_num = threadnum
-            json_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","gctime":"%s",' \
-                          '"heap_usage":"%s","ip":"%s","hostname":"%s","client_num":"%s"}' % \
+            json_string = '{"bigdata_component":"%s","component_service":"%s","date":"%s","time":"%s","gctime":"%s","heap_usage":"%s","ip":"%s","hostname":"%s","client_num":"%s"}' % \
                           (bigdata_component, component_service, date, time, gctime, heap_usage, ip, hostname,
                            client_num)
             self.jsondata_writer(json_string)
@@ -510,38 +555,6 @@ class HIVER(object):
         self.hiveserverNode_jmx_result = hiveserverNode_jmx_result
         self.metastoreNode_jmx_result = metastoreNode_jmx_result
         self.threadnum_list = threadnum_list
-
-        # 调用函数
-        self.screnn_hiveserver2_jmx_re()
-        self.screnn_metastore_jmx_re()
-
-        # return hiveserverNode_jmx_result, metastoreNode_jmx_result
-
-    # screen hiveserver2 jmx result
-    def screnn_hiveserver2_jmx_re(self):
-        # '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}'
-        hiveserverNode_jmx_result = self.hiveserverNode_jmx_result
-        for node in hiveserverNode_jmx_result:
-            node_json = json.loads(node)
-            hostname = node_json["hostname"]
-            ip = node_json["ip"]
-            gctimevalue = node_json["gctimevalue"]
-            heapusage = node_json["heapusage"]
-            print("主机 %s, IP %s 上的 HievServer2 服务的 GC时间：%s, 内存使用率：%s" % (
-                hostname, ip, gctimevalue, heapusage))
-
-    # screen hiveserver2 jmx result
-    def screnn_metastore_jmx_re(self):
-        # '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}'
-        metastoreNode_jmx_result = self.metastoreNode_jmx_result
-        for node in metastoreNode_jmx_result:
-            node_json = json.loads(node)
-            hostname = node_json["hostname"]
-            ip = node_json["ip"]
-            gctimevalue = node_json["gctimevalue"]
-            heapusage = node_json["heapusage"]
-            print("主机 %s, IP %s 上的HievMetastore服务的GC时间：%s, 内存使用率：%s" % (
-                hostname, ip, gctimevalue, heapusage))
 
     # 指标： Hvieserver2的连接客户端数量
     def hiveserver_client_num(self):
@@ -594,9 +607,10 @@ class HIVER(object):
         self.dataloader.set_sqllist(sqllisted=sqllist)
         self.dataloader.loaddata_main()
 
-    # 数据写入本地json文件
-    # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
-    # 此方法可以重构，提出到单独的类方法以精简代码量
+        # 数据写入本地json文件
+        # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
+        # 此方法可以重构，提出到单独的类方法以精简代码量
+
     def jsondata_writer(self, dicstring):
         jsonfile = self.dataload_hive_json_filenamePath
         with open(jsonfile, 'a', encoding="utf-8") as file:

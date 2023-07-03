@@ -35,7 +35,15 @@
         "rm2_hostname": "ocean-bigdata-1a-22"
       },
       "datanode": ["10.0.0.48","10.0.0.40","10.0.0.44","10.0.0.41","10.0.0.43","10.0.0.39","10.0.0.46"],
-      "nodemanager": ["10.0.0.48","10.0.0.40","10.0.0.44","10.0.0.41","10.0.0.43","10.0.0.39","10.0.0.46"]
+      "nodemanager": [
+        {"hostname": "ocean-bigdata-1a-26","ip":"10.0.0.48"},
+        {"hostname": "ocean-bigdata-1a-25","ip":"10.0.0.40"},
+        {"hostname": "ocean-bigdata-1a-23","ip":"10.0.0.44"},
+        {"hostname": "ocean-bigdata-1a-29","ip":"10.0.0.41"},
+        {"hostname": "ocean-bigdata-1a-24","ip":"10.0.0.43"},
+        {"hostname": "ocean-bigdata-1a-27","ip":"10.0.0.39"},
+        {"hostname": "ocean-bigdata-1a-28","ip":"10.0.0.46"}
+      ]
     }
   }
 }
