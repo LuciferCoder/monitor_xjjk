@@ -31,7 +31,7 @@ hdfs 巡检需求
 ```
 
 ```shell script
-拟定使用脚本方式：
+拟定使用脚本方式
 #定时任务执行方式：
 python3 hdfs.py use_crontab="true"
 python3 hdfs.py use_crontab=true

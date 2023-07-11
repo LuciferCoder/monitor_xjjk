@@ -417,7 +417,7 @@ class HIVER(object):
             json_str = '{"hostname":"%s", "ip":"%s", "gctimevalue":"%s", "heapusage":"%s"}' \
                        % (hostname, ip, gctimevalue, heapusage)
 
-            hiveserverNode_jmx_result.append(json_str)
+            # hiveserverNode_jmx_result.append(json_str)
 
             # dataload写入字符串
             # 数据写入字段：

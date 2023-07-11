@@ -653,11 +653,11 @@ class ResourceManager():
 
             json_string = '{"date":"%s","time":"%s","bigdata_component":"%s",' \
                           '"alive_nodes":"%s","NodeManager_healthy":"%s","dead_nodes":"%s"}' % (date,
-                                                                                      time,
-                                                                                      bigdata_component,
-                                                                                      alive_nodes,
-                                                                                      NodeManager_healthy,
-                                                                                      dead_nodes)
+                                                                                                time,
+                                                                                                bigdata_component,
+                                                                                                alive_nodes,
+                                                                                                NodeManager_healthy,
+                                                                                                dead_nodes)
             self.jsondata_writer(json_string)
 
     """
@@ -995,20 +995,24 @@ class ResourceManager():
         # 文件名称 20230622184504_crontab_hdfs_capcity.json
         filename = "%s_crontab_yarn_Apps.json" % curtime
         path = BASE_DIR + "/cron/yarn/%s" % filename
-        lastday_filename = self.lastdayofnowstring
-        lastday_filename_path = BASE_DIR + lastday_filename
+
+        lastday_filename = "%s_crontab_yarn_Apps.json" % self.lastdayofnowstring
+        lastday_filename_path = BASE_DIR + "/cron/yarn/%s" % lastday_filename
 
         # 判断24小时前的文件存不存在，存在读取文件计算；不存在则打印当前已提交的作业总数
         if os.path.exists(lastday_filename_path):
-            with open(lastday_filename, 'w', encoding="utf-8") as reader:
-                reader_cont = reader.read()
-                reader_cont_json = json.loads(reader_cont)
-                AppSubmitted_lastday = reader_cont_json["AppsSubmitted"]
-                self.AppSubmitted_perday = AppSubmitted_lastday
+            try:
+                with open(lastday_filename, 'r', encoding="utf-8") as reader:
+                    reader_cont = reader.read()
+                    reader_cont_json = json.loads(reader_cont)
+                    AppSubmitted_lastday = reader_cont_json["AppsSubmitted"]
+                    self.AppSubmitted_perday = AppSubmitted_lastday
 
-                # 计算作业数
-                abs_num = int(AppSubmitted_lastday) - int(AppSubmitted)
-                print("每天用户提交的作业数: %s" % str(abs_num))
+                    # 计算作业数
+                    abs_num = int(AppSubmitted_lastday) - int(AppSubmitted)
+                    print("每天用户提交的作业数: %s" % str(abs_num))
+            except Exception as e:
+                print(e)
         else:
             self.AppSubmitted_perday = AppSubmitted
             print("前一天相同时间 %s 没有记录的数据存在！当前时间 %s 已提交作业数：%s" % (
