@@ -102,6 +102,11 @@ class HIVER(object):
         self.table_name = self.dataloader.table_name
         # 指标值字典列表，用于dataLoad生成语句
 
+        # self.json_writer = None
+    #
+    # def set_json_writer(self, json_writer):
+    #     self.json_writer = json_writer
+
     # hive配置文件参数分析
     def _json_parse(self):
         # print(self.jsonfile_path)
@@ -619,34 +624,34 @@ class HIVER(object):
     """
 
     # 此方法可以重构，提出到单独的类方法以精简代码量
-    def datamysqlAllwriter(self):
-        sqllist = []
-        # 字典
-        jsonfile = self.dataload_hive_json_filenamePath
-        # "insert into table(key1, key2, key3) values(value1,value2,value3);"
-        sqlfile = open(self.dataload_hive_sql_filenamePath, 'a', encoding="utf-8")
-        table_name = self.table_name
-        with open(jsonfile, 'r') as file:
-            dic_list = file.readlines()
-            for dic in dic_list:
-                dic = json.loads(dic)
-                keys = dic.keys()
-                values = []
-                for key in keys:
-                    value = dic["%s" % key]
-                    values.append(value)
-                # 生成一条语句：
-                key_string = ",".join(keys)
-                values_string = "'" + "','".join(values) + "'"
-                sql = "insert into %s(%s) values(%s);\n" % (table_name, key_string, values_string)
-                sqllist.append(sql)
-                # 写入sql语句到sql文件
-                sqlfile.write(sql)
-            file.close()
-        sqlfile.close()
-
-        self.dataloader.set_sqllist(sqllisted=sqllist)
-        self.dataloader.loaddata_main()
+    # def datamysqlAllwriter(self):
+    #     sqllist = []
+    #     # 字典
+    #     jsonfile = self.dataload_hive_json_filenamePath
+    #     # "insert into table(key1, key2, key3) values(value1,value2,value3);"
+    #     sqlfile = open(self.dataload_hive_sql_filenamePath, 'a', encoding="utf-8")
+    #     table_name = self.table_name
+    #     with open(jsonfile, 'r') as file:
+    #         dic_list = file.readlines()
+    #         for dic in dic_list:
+    #             dic = json.loads(dic)
+    #             keys = dic.keys()
+    #             values = []
+    #             for key in keys:
+    #                 value = dic["%s" % key]
+    #                 values.append(value)
+    #             # 生成一条语句：
+    #             key_string = ",".join(keys)
+    #             values_string = "'" + "','".join(values) + "'"
+    #             sql = "insert into %s(%s) values(%s);\n" % (table_name, key_string, values_string)
+    #             sqllist.append(sql)
+    #             # 写入sql语句到sql文件
+    #             sqlfile.write(sql)
+    #         file.close()
+    #     sqlfile.close()
+    #
+    #     self.dataloader.set_sqllist(sqllisted=sqllist)
+    #     self.dataloader.loaddata_main()
 
         # 数据写入本地json文件
         # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
@@ -658,10 +663,10 @@ class HIVER(object):
             file.write(dicstring + "\n")
             file.close()
 
-    # 重组hive导入文件格式，写入文件到csv文件，之后执行导入
-    def datahiveAllwriter(self):
-        pass
-
+    # # 重组hive导入文件格式，写入文件到csv文件，之后执行导入
+    # def datahiveAllwriter(self):
+    #     pass
+    #
 
 """
 主函数逻辑
@@ -699,7 +704,18 @@ def main_one():
     # 数据导入到mysql
     # 数据导入到mysql时启动以下数据导入：
     if hiver.dataload_type == "mysql":
-        hiver.datamysqlAllwriter()
+        # hiver.datamysqlAllwriter()
+        from utils import datamysqlWriter
+        datamysqlWriter = datamysqlWriter.DATAMYSQLWRITER()
+
+        datamysqlWriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
+        datamysqlWriter.set_table_name(hiver.table_name)
+        datamysqlWriter.set_dataload_hive_sql_filenamePath(hiver.dataload_hive_sql_filenamePath)
+
+
+        datamysqlWriter.datamysqlAllwriter()
+        datamysqlWriter.jsondata_writer()
+
     elif hiver.dataload_type == "hive":
         hiver.datahiveAllwriter()
 

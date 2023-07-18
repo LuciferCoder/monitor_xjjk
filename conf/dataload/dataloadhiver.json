@@ -20,7 +20,7 @@
       "port": "3306",
       "password_encoding": "MGd2ekpyNjZpTnM1",
       "password": "0gvzJr66iNs5",
-      "hiveserver2": "",
+      "hiveserver2": ["10.0.0.42","10.0.0.45","10.0.0.47"],
       "hiveserver2_port": "10000",
       "database": "tmp",
       "table_name": "monitorxjjk",

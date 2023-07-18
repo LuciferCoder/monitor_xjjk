@@ -242,3 +242,11 @@ class DATALOADHIVER(object):
         cursor.execute('SELECT * FROM test_db.test_parquet')
         print(cursor.fetchone())
         print(cursor.fetchall())
+
+    def loaddata_main(self):
+        # dataloader = DATALOADER()
+        if self.usemysql == "true":
+            self.hiveut_main()
+        else:
+            # 其它数据库入库表设计，与数据库入库工具待补充
+            print("其他数据库方法，请联系研发人员补充数据入库相关的util工具")
