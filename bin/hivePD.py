@@ -30,11 +30,11 @@ sys.path.append(BASE_DIR)
 class HIVER(object):
     def __init__(self):
         self.BASE_DIR = BASE_DIR
-        self.jsonfile_path = self.BASE_DIR + "/conf/hive/hive.json"
+        self.jsonfile_path = self.BASE_DIR + "/conf/hivePD/hive.json"
         name, version, cluster_name, hiveconf, krb5conf, client_keytab, \
             client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
             hiveserver2_node_list, hiveserver2_node_port, \
-            metastore_node_list, metastore_node_port = self._json_parse()
+            metastore_node_list, metastore_node_port, dataload_type = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -46,6 +46,7 @@ class HIVER(object):
         self.hiveserver2_node_port = hiveserver2_node_port
         self.metastore_node_list = metastore_node_list
         self.metastore_node_port = metastore_node_port
+        self.dataload_type = dataload_type
 
         # self.hiveconf = hiveconf
 
@@ -137,9 +138,12 @@ class HIVER(object):
             metastore_node_list = load_dict["dependencies"]["hivenodes"]["metastore"]["metastoreNodes"]
             metastore_node_port = load_dict["dependencies"]["hivenodes"]["metastore"]["metastorePort"]
 
+            # 数据导入类型
+            dataload_type = load_dict["dependencies"]["config"]["dataload_type"]
+
             return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
                 use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-                metastore_node_list, metastore_node_port
+                metastore_node_list, metastore_node_port, dataload_type
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -615,7 +619,7 @@ class HIVER(object):
     """
 
     # 此方法可以重构，提出到单独的类方法以精简代码量
-    def dataAllwriter(self):
+    def datamysqlAllwriter(self):
         sqllist = []
         # 字典
         jsonfile = self.dataload_hive_json_filenamePath
@@ -654,6 +658,10 @@ class HIVER(object):
             file.write(dicstring + "\n")
             file.close()
 
+    # 重组hive导入文件格式，写入文件到csv文件，之后执行导入
+    def datahiveAllwriter(self):
+        pass
+
 
 """
 主函数逻辑
@@ -689,7 +697,13 @@ def main_one():
     hiver.hiveserver_client_num()
 
     # 数据导入到mysql
-    hiver.dataAllwriter()
+    # 数据导入到mysql时启动以下数据导入：
+    if hiver.dataload_type == "mysql":
+        hiver.datamysqlAllwriter()
+    elif hiver.dataload_type == "hive":
+        hiver.datahiveAllwriter()
+
+    # 数据导入到hive
 
 
 if __name__ == '__main__':

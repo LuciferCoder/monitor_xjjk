@@ -23,19 +23,22 @@ from datetime import datetime, timedelta
 # 数据库导入到MySQL
 import utils.mysqlUtil as myut
 
+import utils.hiveUtils as hvut
+
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
 
+# 使用mysql作为数据导入
 class DATALOADER(object):
     def __init__(self):
         self.BASE_DIR = BASE_DIR
         self.jsonfile_path = self.BASE_DIR + "/conf/dataload/dataload.json"
         name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
             password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
-            datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql,table_name,charset = self._json_parse()
+            datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset = self._json_parse()
         self.name = name
         self.version = version
         self.usemysql = usemysql
@@ -53,8 +56,6 @@ class DATALOADER(object):
         self.datalaod_hdfs_sql = datalaod_hdfs_sql
         self.datalaod_yarn_json = datalaod_yarn_json
         self.datalaod_yarn_sql = datalaod_yarn_sql
-
-
 
         self.table_name = table_name
         self.charset = charset
@@ -92,10 +93,9 @@ class DATALOADER(object):
             datalaod_yarn_json = load_dict["dependencies"]["mysql"]["dataload_yarn"]["json_dic"]
             datalaod_yarn_sql = load_dict["dependencies"]["mysql"]["dataload_yarn"]["sql"]
 
-
             return name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
                 password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
-                datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql,table_name,charset
+                datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -161,5 +161,84 @@ class DATALOADER(object):
             # 其它数据库入库表设计，与数据库入库工具待补充
             print("其他数据库方法，请联系研发人员补充数据入库相关的util工具")
 
-# if __name__ == '__main__':
-#     main
+
+# hive时的配置文件dataloadhiver.json
+class DATALOADHIVER(object):
+
+    def __init__(self):
+        self.dataloadhiver_conf_file = BASE_DIR + "/conf/dataload/dataloadhiver.json"
+        self.name, \
+            self.version, \
+            self.usemysql, \
+            self.use_pwd_coding, \
+            self.user, \
+            self.port, \
+            self.host, \
+            self.password_encoding, \
+            self.password, \
+            self.database, \
+            self.datalaod_hive_json, \
+            self.datalaod_hive_sql, \
+            self.datalaod_hdfs_json, \
+            self.datalaod_hdfs_sql, \
+            self.datalaod_yarn_json, \
+            self.datalaod_yarn_sql, \
+            self.table_name, \
+            self.charset = self.__parser__()
+
+        # hiveserver2 IP地址、端口
+        self.hiveserver2_ip = None
+        self.hiveserver2_port = None
+
+    # 设置和iveserver_ip
+    def set_hiveserver2_ip(self, hiveserver2_ip):
+        self.hiveserver2_ip = hiveserver2_ip
+
+    # 设置和iveserver_port
+    def set_hiveserver2_port(self, hiveserver2_port):
+        self.hiveserver2_port = hiveserver2_port
+
+    # 配置文件分析
+    def __parser__(self):
+        # print(self.jsonfile_path)
+        with open(self.dataloadhiver_conf_file, 'r') as jsonfile:
+            load_dict = json.load(jsonfile)
+
+            name = load_dict["name"]
+            version = load_dict["version"]
+
+            # mysql 配置
+            # usemysql = load_dict["use_mysql"]
+            usemysql = load_dict["dependencies"]["config"]["use_mysql"]
+            use_pwd_coding = load_dict["dependencies"]["mysql"]["use_pwd_coding"]
+            user = load_dict["dependencies"]["mysql"]["user"]
+            host = load_dict["dependencies"]["mysql"]["host"]
+            port = load_dict["dependencies"]["mysql"]["port"]
+            password_encoding = load_dict["dependencies"]["mysql"]["password_encoding"]
+            password = load_dict["dependencies"]["mysql"]["password"]
+            database = load_dict["dependencies"]["mysql"]["database"]
+            table_name = load_dict["dependencies"]["mysql"]["table_name"]
+            charset = load_dict["dependencies"]["mysql"]["charset"]
+
+            datalaod_hive_json = load_dict["dependencies"]["mysql"]["dataload_hive"]["json_dic"]
+            datalaod_hive_sql = load_dict["dependencies"]["mysql"]["dataload_hive"]["sql"]
+            datalaod_hdfs_json = load_dict["dependencies"]["mysql"]["dataload_hdfs"]["json_dic"]
+            datalaod_hdfs_sql = load_dict["dependencies"]["mysql"]["dataload_hdfs"]["sql"]
+            datalaod_yarn_json = load_dict["dependencies"]["mysql"]["dataload_yarn"]["json_dic"]
+            datalaod_yarn_sql = load_dict["dependencies"]["mysql"]["dataload_yarn"]["sql"]
+
+            return name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
+                password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
+                datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset
+
+    def hiveut_main(self):
+        # cursor = hive.connect('localhost').cursor()
+        conn = hvut.Connection(host="localhost",
+                               port=10000,
+                               auth="KERBEROS",
+                               database="test_db",
+                               kerberos_service_name="hive")
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM test_db.test_parquet')
+        print(cursor.fetchone())
+        print(cursor.fetchall())

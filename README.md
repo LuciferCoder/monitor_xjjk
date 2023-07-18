@@ -89,7 +89,7 @@ create table monitorxjjk(
 	`NodeManager_healthy` int(250) DEFAULT NULL,
 	`yarn_nospace` int(250) DEFAULT NULL,
 	`Apppending_longten` int(250) DEFAULT NULL,
-	rootqueue_usage_percent varchar(50) DEFAULT NULL;
+	`rootqueue_usage_percent` varchar(50) DEFAULT NULL;
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 # 创建索引

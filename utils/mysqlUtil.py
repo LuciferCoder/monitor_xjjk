@@ -32,13 +32,6 @@ class MysqlUtil(object):
 
     def cursor_cnn(self):
         try:
-            # print(self.host)
-            # print(self.user)
-            # print(self.password)
-            # print(self.database)
-            # print(self.port)
-            # print(self.charset)
-
             conn = pymysql.connect(host=self.host,
                                    user=self.user,
                                    password=self.password,

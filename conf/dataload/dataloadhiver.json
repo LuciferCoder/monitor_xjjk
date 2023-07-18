@@ -1,0 +1,42 @@
+{
+  "name": "dataloadhiver",
+  "version": "1.0.0",
+  "dependencies": {
+    "config": {
+      "use_mysql": "true",
+      "use_kerberos": "true",
+      "cluster_name": "ocean-bdp3",
+      "user": "hdfs",
+      "num": "4",
+      "second": "5",
+      "hivesconf": "hive-site.xml",
+      "ssh_user": "root",
+      "ssh_pkey": "/root/.ssh/id_rsa"
+    },
+    "hive": {
+      "use_pwd_coding": "false",
+      "user": "root",
+      "host": "10.0.0.5",
+      "port": "3306",
+      "password_encoding": "MGd2ekpyNjZpTnM1",
+      "password": "0gvzJr66iNs5",
+      "hiveserver2": "",
+      "hiveserver2_port": "10000",
+      "database": "tmp",
+      "table_name": "monitorxjjk",
+      "charset": "utf8",
+      "dataload_hive": {
+        "json_dic": "/dataload/hive/json_dic",
+        "sql": "/dataload/hive/sql"
+      },
+      "dataload_hdfs": {
+        "json_dic": "/dataload/hdfs/json",
+        "sql": "/dataload/hdfs/sql"
+      },
+      "dataload_yarn": {
+        "json_dic": "/dataload/yarn/json",
+        "sql": "/dataload/yarn/sql"
+      }
+    }
+  }
+}

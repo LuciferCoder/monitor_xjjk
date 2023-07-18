@@ -200,7 +200,7 @@
 
 <property>
     <name>hive.metastore.metrics.enabled</name>
-    <value>hive.server2.metrics.enabled</value>
+    <value>true</value>
 </property>
 
 

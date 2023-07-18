@@ -10,7 +10,8 @@
       "second": "5",
       "hivesconf": "hive-site.xml",
       "ssh_user": "root",
-      "ssh_pkey": "/root/.ssh/id_rsa"
+      "ssh_pkey": "/root/.ssh/id_rsa",
+      "dataload_type": "mysql"
     },
     "kerberos": {
       "krb5conf": "/etc/krb5.conf",
