@@ -11,7 +11,8 @@
       "hivesconf": "hive-site.xml",
       "ssh_user": "root",
       "ssh_pkey": "/root/.ssh/id_rsa",
-      "dataload_type": "hive"
+      "dataload_type": "hive",
+      "dataload_time": "00:00"
     },
     "kerberos": {
       "krb5conf": "/etc/krb5.conf",

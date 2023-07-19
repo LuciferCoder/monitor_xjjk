@@ -67,6 +67,7 @@ row format delimited fields terminated by ',';
 class DATAHIVEWRITER(object):
 
     def __init__(self):
+        self.dataload_time = None
         self.cmd = None
         self.json_path = "/csv"
         self.bigdata_name = None
@@ -132,6 +133,10 @@ class DATAHIVEWRITER(object):
     def get_table_fields_list(self):
         return self.table_fields_list
 
+
+    def set_dataload_time(self, dataload_time):
+        self.dataload_time = dataload_time
+
     # 分析字段列表
     def analyse_table_fields(self):
         filepath = self.table_fields_jsonpath
@@ -182,12 +187,14 @@ class DATAHIVEWRITER(object):
                     file.close()
                 f.close()
 
-            # 设置变量，导入数据
-            self.dataloader.set_hiveserver2_ip(self.hiveserver2_ip)
-            self.dataloader.set_hiveserver2_port(self.hiveserver2_port)
-            self.dataloader.set_csv_filepath(self.json_csv_file)
-            self.dataloader.set_cmd(cmd=self.cmd)
-            self.dataloader.loaddata_main()
+            # 设置变量，判断时分来进行导入数据
+            if str(self.dataload_time).strip().replace(":","") == str(self.datestring).strip()[8:-2]:
+                self.dataloader.set_hiveserver2_ip(self.hiveserver2_ip)
+                self.dataloader.set_hiveserver2_port(self.hiveserver2_port)
+                self.dataloader.set_csv_filepath(self.json_csv_file)
+                self.dataloader.set_cmd(cmd=self.cmd)
+                self.dataloader.loaddata_main()
 
         except Exception as e:
             print("read_jsonfile: " + e)
+

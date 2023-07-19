@@ -34,7 +34,7 @@ class HIVER(object):
         name, version, cluster_name, hiveconf, krb5conf, client_keytab, \
             client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
             hiveserver2_node_list, hiveserver2_node_port, \
-            metastore_node_list, metastore_node_port, dataload_type = self._json_parse()
+            metastore_node_list, metastore_node_port, dataload_type, dataload_time = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -47,6 +47,7 @@ class HIVER(object):
         self.metastore_node_list = metastore_node_list
         self.metastore_node_port = metastore_node_port
         self.dataload_type = dataload_type
+        self.dataload_time = dataload_time
 
         # self.hiveconf = hiveconf
 
@@ -146,10 +147,11 @@ class HIVER(object):
 
             # 数据导入类型
             dataload_type = load_dict["dependencies"]["config"]["dataload_type"]
+            dataload_time = load_dict["dependencies"]["config"]["dataload_time"]
 
             return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
                 use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-                metastore_node_list, metastore_node_port, dataload_type
+                metastore_node_list, metastore_node_port, dataload_type, dataload_time
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -723,17 +725,15 @@ def main_one():
         datahivewriter.set_bigdata_name(hiver.name)
         datahivewriter.set_datestring(hiver.datenowstring)
         datahivewriter.analyse_table_fields()
+        datahivewriter.set_dataload_time(hiver.dataload_time)
         cmd = "load data local inpath '%s' into table %s.%s partition dt='%s';" % (datahivewriter.get_csv_filepath(),
                                                                                    datahivewriter.dataloader.database,
                                                                                    datahivewriter.dataloader.table_name,
                                                                                    hiver.datenowdate)
         datahivewriter.set_self_cmd(cmd=cmd)
-
         datahivewriter.read_jsonfile()
-
-        # datahivewriter.
-
-    # 数据导入到hive
+    else:
+        print("other database need to add!")
 
 
 if __name__ == '__main__':
