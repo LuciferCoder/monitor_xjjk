@@ -14,6 +14,8 @@ import sys
 import json
 import csv
 
+from bin import dataLoad
+
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -62,16 +64,45 @@ row format delimited fields terminated by ',';
 """
 
 
-class datahiveWriter(object):
+class DATAHIVEWRITER(object):
 
     def __init__(self):
+        self.cmd = None
+        self.json_path = "/csv"
+        self.bigdata_name = None
         self.table_fields_json = "/conf/hivePD/table_fields.json"
         self.table_fields_jsonpath = BASE_DIR + self.table_fields_json
         # json数据文件
         self.dataload_hive_json_filenamePath = None
         self.datestring = None
-        self.csv_filepath = BASE_DIR + "/csv/%s.scv" % self.datestring
+        # /csv/202307192313_hive.csv
+        self.csv_filepath = BASE_DIR + "%s/%s_%s.csv" % (self.json_path, self.datestring, self.bigdata_name)
+        self.final_csv_filepath = BASE_DIR + "/%s/%s.scv" % (self.json_path, self.datestring)
         self.table_fields_list = None
+        # 按照组件写完整的json文件
+        self.csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.csv" % (self.bigdata_name,
+                                                                   self.datestring,
+                                                                   self.bigdata_name)
+        # csv文件
+        self.json_csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.json" % (self.bigdata_name,
+                                                                         self.datestring,
+                                                                         self.bigdata_name)
+
+        self.dataloader = dataLoad.DATALOADHIVER()
+        self.hiveserver2_ip = None
+        self.hiveserver2_port = None
+
+    def set_self_cmd(self, cmd):
+        self.cmd = cmd
+
+    def get_csv_filepath(self):
+        return self.csv_filepath
+
+    def set_hiveserver2_ip(self, hiveserver2_ip):
+        self.hiveserver2_ip = hiveserver2_ip
+
+    def set_hiveserver2_port(self, hiveserver2_port):
+        self.hiveserver2_port = hiveserver2_port
 
     # 传入值 dataload_hive_json_filenamePath
     def set_dataload_hive_json_filenamePath(self, dataload_hive_json_filenamePath):
@@ -87,6 +118,12 @@ class datahiveWriter(object):
 
     def get_datestring(self):
         return self.datestring
+
+    def set_bigdata_name(self, bigdata_name):
+        self.bigdata_name = bigdata_name
+
+    def get_bigdata_name(self):
+        return self.bigdata_name
 
     # 返回表结构字段列表
     def set_table_fields_list(self, table_fields_list):
@@ -111,15 +148,46 @@ class datahiveWriter(object):
         file = self.dataload_hive_json_filenamePath
         try:
             with open(file, 'r', encoding='utf-8') as file:
-                jsonfile_cont = json.load(file)
-                jsonfile_keys = jsonfile_cont.keys()
-                table_fields_list = self.table_fields_list
-                fields_list_dic = {'"' + '":"NULL",'.join(table_fields_list) + '"'}
-                for key in jsonfile_keys:
-                    fields_list_dic[key] = jsonfile_cont[key]
+                jsonfile_conts = file.readlines()
+                for jsonfile_cont in jsonfile_conts:
+                    json_cont = json.loads(jsonfile_cont)
+                    jsonfile_keys = json_cont.keys()
+                    table_fields_list = self.get_table_fields_list()
+                    fields_list_dic = {'"' + '":"NULL",'.join(table_fields_list) + '"'}
+                    # fields_list_dic = dict(fields_list_dic)
+                    # 需要打印确认格式
+                    print("fields_list_dic: ", fields_list_dic)
+                    print("fields_list_dic type: ", type(fields_list_dic))
 
-                # 将生成的
-                with open()
+                    for key in jsonfile_keys:
+                        fields_list_dic[key] = jsonfile_cont[key]
+
+                    # 将生成的完整的json数据写入到json文件中
+                    jsonfile_name_path = self.json_csv_file
+                    with open(jsonfile_name_path, 'a', encoding='utf-8') as jsonfile:
+                        jsonfile.write(fields_list_dic.values())
+                        jsonfile.close()
+                file.close()
+
+            # 将生成的全部字段的json文件的值写入到csv文件中，逗号分隔
+            csv_file = self.csv_file
+            with open(csv_file, 'a', encoding='utf-8') as f:
+                jsonfile_name_path = self.json_csv_file
+                csv_writer = csv.writer(f)
+                with open(jsonfile_name_path, 'r', encoding='utf-8') as file:
+                    conts = file.readlines()
+                    for cont in conts:
+                        json_cont = json.loads(cont)
+                        csv_writer.writerow(json_cont.values())
+                    file.close()
+                f.close()
+
+            # 设置变量，导入数据
+            self.dataloader.set_hiveserver2_ip(self.hiveserver2_ip)
+            self.dataloader.set_hiveserver2_port(self.hiveserver2_port)
+            self.dataloader.set_csv_filepath(self.json_csv_file)
+            self.dataloader.set_cmd(cmd=self.cmd)
+            self.dataloader.loaddata_main()
 
         except Exception as e:
             print("read_jsonfile: " + e)

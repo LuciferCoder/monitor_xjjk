@@ -12,7 +12,7 @@ from pyhive import hive
 # 待补充
 class HIVEUTILS(object):
 
-    def __init__(self, host, port, auth, database, kerberos_service_name, loaddata_sql):
+    def __init__(self, host, port, auth, database, kerberos_service_name, cmd):
         self.cursor = None
         self.conn = None
         self.host = host
@@ -21,7 +21,7 @@ class HIVEUTILS(object):
         self.database = database
         self.kerberos_service_name = kerberos_service_name
         self.cmd = None
-        self.loaddata_sql = loaddata_sql
+        self.cmd = cmd
 
     # 传入值
     def set_cmd(self, cmd):
@@ -55,11 +55,12 @@ class HIVEUTILS(object):
         try:
             cursor = self.cursor
             cmd = self.cmd
+            cursor.execute(cmd)
             result = cursor.fetchall()
             for re in result:
                 print(re)
         except Exception as e:
-            print(e)
+            print("hiver.exec_cmd: ", e)
 
     def cursor_close(self):
         cursor = self.cursor

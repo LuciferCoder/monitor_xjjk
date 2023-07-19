@@ -103,6 +103,7 @@ class HIVER(object):
         # 指标值字典列表，用于dataLoad生成语句
 
         # self.json_writer = None
+
     #
     # def set_json_writer(self, json_writer):
     #     self.json_writer = json_writer
@@ -653,9 +654,9 @@ class HIVER(object):
     #     self.dataloader.set_sqllist(sqllisted=sqllist)
     #     self.dataloader.loaddata_main()
 
-        # 数据写入本地json文件
-        # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
-        # 此方法可以重构，提出到单独的类方法以精简代码量
+    # 数据写入本地json文件
+    # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
+    # 此方法可以重构，提出到单独的类方法以精简代码量
 
     def jsondata_writer(self, dicstring):
         jsonfile = self.dataload_hive_json_filenamePath
@@ -667,6 +668,7 @@ class HIVER(object):
     # def datahiveAllwriter(self):
     #     pass
     #
+
 
 """
 主函数逻辑
@@ -711,13 +713,25 @@ def main_one():
         datamysqlWriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
         datamysqlWriter.set_table_name(hiver.table_name)
         datamysqlWriter.set_dataload_hive_sql_filenamePath(hiver.dataload_hive_sql_filenamePath)
-
-
         datamysqlWriter.datamysqlAllwriter()
-        datamysqlWriter.jsondata_writer()
 
     elif hiver.dataload_type == "hive":
-        hiver.datahiveAllwriter()
+        # hiver.datahiveAllwriter()
+        from utils import datahiveWriter
+        datahivewriter = datahiveWriter.DATAHIVEWRITER()
+        datahivewriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
+        datahivewriter.set_bigdata_name(hiver.name)
+        datahivewriter.set_datestring(hiver.datenowstring)
+        datahivewriter.analyse_table_fields()
+        cmd = "load data local inpath '%s' into table %s.%s partition dt='%s';" % (datahivewriter.get_csv_filepath(),
+                                                                                   datahivewriter.dataloader.database,
+                                                                                   datahivewriter.dataloader.table_name,
+                                                                                   hiver.datenowdate)
+        datahivewriter.set_self_cmd(cmd=cmd)
+
+        datahivewriter.read_jsonfile()
+
+        # datahivewriter.
 
     # 数据导入到hive
 
