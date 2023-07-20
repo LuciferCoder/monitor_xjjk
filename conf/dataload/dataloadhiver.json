@@ -4,7 +4,7 @@
   "dependencies": {
     "config": {
       "use_mysql": "false",
-      "user_hive": "true",
+      "use_hive": "true",
       "use_kerberos": "true",
       "cluster_name": "ocean-bdp3",
       "user": "hdfs",
@@ -35,8 +35,9 @@
       "dataload_yarn": {
         "json_dic": "/dataload/yarn/json",
         "sql": "/dataload/yarn/sql"
-      },
-      "hive": {
+      }
+    },
+    "hive": {
       "use_pwd_coding": "false",
       "user": "root",
       "host": "10.0.0.5",

@@ -133,7 +133,6 @@ class DATAHIVEWRITER(object):
     def get_table_fields_list(self):
         return self.table_fields_list
 
-
     def set_dataload_time(self, dataload_time):
         self.dataload_time = dataload_time
 
@@ -158,13 +157,28 @@ class DATAHIVEWRITER(object):
                     json_cont = json.loads(jsonfile_cont)
                     jsonfile_keys = json_cont.keys()
                     table_fields_list = self.get_table_fields_list()
-                    fields_list_dic = {'"' + '":"NULL",'.join(table_fields_list) + '"'}
+                    fields_list_dic = "{"+'"' + '":"NULL","'.join(table_fields_list) + '":"NULL"' + "}"
                     # fields_list_dic = dict(fields_list_dic)
                     # 需要打印确认格式
+                    """
+                    fields_list_dic:  
+                    {'"date_st":"NULL",time_st":"NULL",bigdata":"NULL",component_service":"NULL",
+                    hdfs_usage":"NULL",ip":"NULL",hostname":"NULL",heap_usage":"NULL",
+                    component_service_status":"NULL",hdfs_added":"NULL",namenode_ha_status":"NULL",
+                    hdfs_healthy":"NULL",alive_nodes":"NULL",dead_nodes":"NULL",volume_failure":"NULL",
+                    gctime":"NULL",client_num":"NULL",rm_core_total":"NULL",rm_core_used":"NULL",
+                    rm_core_avalable":"NULL",rm_mem_total":"NULL",rm_mem_use":"NULL",rm_mem_available":"NULL",
+                    Apprunning":"NULL",AppFailed":"NULL",AppSubmitted":"NULL",AppSubmitted_perday":"NULL",
+                    AppPending":"NULL",NodeManager_healthy":"NULL",yarn_nospace":"NULL",Apppending_longten":"NULL",
+                    rootqueue_usage_percent"'}
+                    """
                     print("fields_list_dic: ", fields_list_dic)
+                    print("fields_list_dic type: ", type(fields_list_dic))
+                    fields_list_dic = json.loads(fields_list_dic)
                     print("fields_list_dic type: ", type(fields_list_dic))
 
                     for key in jsonfile_keys:
+                        fields_list_dic.set()
                         fields_list_dic[key] = jsonfile_cont[key]
 
                     # 将生成的完整的json数据写入到json文件中
@@ -188,7 +202,9 @@ class DATAHIVEWRITER(object):
                 f.close()
 
             # 设置变量，判断时分来进行导入数据
-            if str(self.dataload_time).strip().replace(":","") == str(self.datestring).strip()[8:-2]:
+            if str(self.dataload_time).strip().replace(":", "") == str(self.datestring).strip()[8:-2]:
+                print("datahiveWriter: ", self.dataload_time.strip().replace(":", ""), " ",
+                      self.datestring.strip()[8:-2])
                 self.dataloader.set_hiveserver2_ip(self.hiveserver2_ip)
                 self.dataloader.set_hiveserver2_port(self.hiveserver2_port)
                 self.dataloader.set_csv_filepath(self.json_csv_file)
@@ -197,4 +213,3 @@ class DATAHIVEWRITER(object):
 
         except Exception as e:
             print("read_jsonfile: " + e)
-

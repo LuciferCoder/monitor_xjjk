@@ -171,11 +171,11 @@ class DATALOADHIVER(object):
         self.dataloadhiver_conf_file = BASE_DIR + "/conf/dataload/dataloadhiver.json"
         self.name, \
             self.version, \
-            self.usemysql, \
+            self.usehive, \
             self.use_pwd_coding, \
             self.user, \
             self.port, \
-            self.host, \
+            self.host,\
             self.password_encoding, \
             self.password, \
             self.database, \
@@ -184,11 +184,10 @@ class DATALOADHIVER(object):
             self.datalaod_hdfs_json, \
             self.datalaod_hdfs_sql, \
             self.datalaod_yarn_json, \
-            self.datalaod_yarn_sql, \
+            self.datalaod_yarn_sql,\
             self.table_name, \
             self.charset, \
-            self.use_kerberos, \
-            self.use_hive = self.__parser__()
+            self.use_kerberos = self.__parser__()
 
         # hiveserver2 IP地址、端口
         self.hiveserver2_ip = None
