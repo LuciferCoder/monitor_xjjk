@@ -723,7 +723,9 @@ def main_one():
         datahivewriter = datahiveWriter.DATAHIVEWRITER()
         datahivewriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
         datahivewriter.set_bigdata_name(hiver.name)
+        print(datahivewriter.bigdata_name)
         datahivewriter.set_datestring(hiver.datenowstring)
+        print(datahivewriter.datestring)
         datahivewriter.analyse_table_fields()
         datahivewriter.set_dataload_time(hiver.dataload_time)
         cmd = "load data local inpath '%s' into table %s.%s partition dt='%s';" % (datahivewriter.get_csv_filepath(),

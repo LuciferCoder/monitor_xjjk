@@ -27,8 +27,8 @@ csv文件格式
 
 # 建表语句
 create table monitorxjjk(
-date_st string comment '6位日期数值，例:20230712 指2023年7月12日',
-time_st string comment '6位时间数值，例:104400 值10点44分00秒',
+date string comment '6位日期数值，例:20230712 指2023年7月12日',
+time string comment '6位时间数值，例:104400 值10点44分00秒',
 bigdata_component string comment '大数据组件名称，例如 hadoop',
 component_service string comment '大数据组件服务名称，例如 hdfs,yarn,hiveserver2等',
 hdfs_usage string comment 'HDFS使用率',
@@ -81,13 +81,13 @@ class DATAHIVEWRITER(object):
         self.final_csv_filepath = BASE_DIR + "/%s/%s.scv" % (self.json_path, self.datestring)
         self.table_fields_list = None
         # 按照组件写完整的json文件
-        self.csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.csv" % (self.bigdata_name,
-                                                                   self.datestring,
-                                                                   self.bigdata_name)
+        # self.csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.csv" % (self.bigdata_name,
+        #                                                            self.datestring,
+        #                                                            self.bigdata_name)
         # csv文件
-        self.json_csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.json" % (self.bigdata_name,
-                                                                         self.datestring,
-                                                                         self.bigdata_name)
+        # self.json_csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.json" % (self.bigdata_name,
+        #                                                                  self.datestring,
+        #                                                                  self.bigdata_name)
 
         self.dataloader = dataLoad.DATALOADHIVER()
         self.hiveserver2_ip = None
@@ -151,13 +151,16 @@ class DATAHIVEWRITER(object):
     def read_jsonfile(self):
         file = self.dataload_hive_json_filenamePath
         try:
+            jsonfile_name_path = BASE_DIR + "/dataload/csv/%s/%s_%s.json" % (self.bigdata_name,
+                                                                             self.datestring,
+                                                                             self.bigdata_name)
             with open(file, 'r', encoding='utf-8') as file:
                 jsonfile_conts = file.readlines()
                 for jsonfile_cont in jsonfile_conts:
                     json_cont = json.loads(jsonfile_cont)
                     jsonfile_keys = json_cont.keys()
                     table_fields_list = self.get_table_fields_list()
-                    fields_list_dic = "{"+'"' + '":"NULL","'.join(table_fields_list) + '":"NULL"' + "}"
+                    fields_list_dic = "{" + '"' + '":"NULL","'.join(table_fields_list) + '":"NULL"' + "}\n"
                     # fields_list_dic = dict(fields_list_dic)
                     # 需要打印确认格式
                     """
@@ -177,21 +180,29 @@ class DATAHIVEWRITER(object):
                     fields_list_dic = json.loads(fields_list_dic)
                     print("fields_list_dic type: ", type(fields_list_dic))
 
+                    print("json_cont: ", json_cont)
+                    print("json_cont type", type(json_cont))
+
                     for key in jsonfile_keys:
-                        fields_list_dic.set()
-                        fields_list_dic[key] = jsonfile_cont[key]
+                        value = json_cont[key]
+                        # fields_list_dic[key] = jsonfile_cont[key]
+                        fields_list_dic["%s" % key] = value
 
                     # 将生成的完整的json数据写入到json文件中
-                    jsonfile_name_path = self.json_csv_file
+                    # jsonfile_name_path:  /export/monitor_xjjk/dataload/csv/None/None_None.json
+                    print(jsonfile_name_path)
                     with open(jsonfile_name_path, 'a', encoding='utf-8') as jsonfile:
-                        jsonfile.write(fields_list_dic.values())
+                        jsonfile.write(str(fields_list_dic).replace("'", "\"")+'\n')
                         jsonfile.close()
                 file.close()
 
             # 将生成的全部字段的json文件的值写入到csv文件中，逗号分隔
-            csv_file = self.csv_file
+            # csv_file = self.csv_file
+            csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.csv" % (self.bigdata_name,
+                                                                  self.datestring,
+                                                                  self.bigdata_name)
             with open(csv_file, 'a', encoding='utf-8') as f:
-                jsonfile_name_path = self.json_csv_file
+                # jsonfile_name_path = jsonfile_name_path
                 csv_writer = csv.writer(f)
                 with open(jsonfile_name_path, 'r', encoding='utf-8') as file:
                     conts = file.readlines()
@@ -212,4 +223,4 @@ class DATAHIVEWRITER(object):
                 self.dataloader.loaddata_main()
 
         except Exception as e:
-            print("read_jsonfile: " + e)
+            print("read_jsonfile: ", e)

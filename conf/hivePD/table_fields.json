@@ -1,8 +1,8 @@
 {
     "fields":[
-        "date_st",
-        "time_st",
-        "bigdata",
+        "date",
+        "time",
+        "bigdata_component",
         "component_service",
         "hdfs_usage",
         "ip",
