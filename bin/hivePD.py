@@ -26,6 +26,9 @@ import dataLoad
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
+from utils import datamysqlWriter as mysqlwriter
+from utils import datahiveWriter as hivewriter
+
 
 class HIVER(object):
     def __init__(self):
@@ -709,8 +712,8 @@ def main_one():
     # 数据导入到mysql时启动以下数据导入：
     if hiver.dataload_type == "mysql":
         # hiver.datamysqlAllwriter()
-        from utils import datamysqlWriter
-        datamysqlWriter = datamysqlWriter.DATAMYSQLWRITER()
+        # from utils import datamysqlWriter
+        datamysqlWriter = mysqlwriter.DATAMYSQLWRITER()
 
         datamysqlWriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
         datamysqlWriter.set_table_name(hiver.table_name)
@@ -719,8 +722,7 @@ def main_one():
 
     elif hiver.dataload_type == "hive":
         # hiver.datahiveAllwriter()
-        from utils import datahiveWriter
-        datahivewriter = datahiveWriter.DATAHIVEWRITER()
+        datahivewriter = hivewriter.DATAHIVEWRITER()
         datahivewriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
         datahivewriter.set_bigdata_name(hiver.name)
         print(datahivewriter.bigdata_name)
@@ -728,10 +730,24 @@ def main_one():
         print(datahivewriter.datestring)
         datahivewriter.analyse_table_fields()
         datahivewriter.set_dataload_time(hiver.dataload_time)
+        hiveserver2_ip = json.loads(str(hiver.hiveserver2_node_list[0]).replace("\'", "\""))["ip"]
+        print("hiveserver2_ip: ", hiveserver2_ip)
+        datahivewriter.set_hiveserver2_ip(hiveserver2_ip)
+        datahivewriter.set_hiveserver2_port(hiver.hiveserver2_node_port)
+        print("datahivewriter.set_hiveserver2_ip: ",datahivewriter.get_hiveserver2_ip())
+        print("datahivewriter.set_hiveserver2_port: ",datahivewriter.get_hiveserver2_port())
+
+
+
+        print("hiver.hiveserver2_node_list[0]: ", hiver.hiveserver2_node_list[0])
+        print("hiver.hiveserver2_node_port: ", hiver.hiveserver2_node_port)
         cmd = "load data local inpath '%s' into table %s.%s partition dt='%s';" % (datahivewriter.get_csv_filepath(),
                                                                                    datahivewriter.dataloader.database,
                                                                                    datahivewriter.dataloader.table_name,
                                                                                    hiver.datenowdate)
+        #
+
+        print(cmd)
         datahivewriter.set_self_cmd(cmd=cmd)
         datahivewriter.read_jsonfile()
     else:

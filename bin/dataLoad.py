@@ -166,16 +166,20 @@ class DATALOADER(object):
 class DATALOADHIVER(object):
 
     def __init__(self):
+        self.client_keytab_principle = None
+        self.name = None
+        self.client_keytab = None
+        self.krb5conf = None
         self.cmd = None
         self.csv_filepath = None
         self.dataloadhiver_conf_file = BASE_DIR + "/conf/dataload/dataloadhiver.json"
         self.name, \
             self.version, \
-            self.usehive, \
+            self.use_hive, \
             self.use_pwd_coding, \
             self.user, \
             self.port, \
-            self.host,\
+            self.host, \
             self.password_encoding, \
             self.password, \
             self.database, \
@@ -184,7 +188,7 @@ class DATALOADHIVER(object):
             self.datalaod_hdfs_json, \
             self.datalaod_hdfs_sql, \
             self.datalaod_yarn_json, \
-            self.datalaod_yarn_sql,\
+            self.datalaod_yarn_sql, \
             self.table_name, \
             self.charset, \
             self.use_kerberos = self.__parser__()
@@ -198,13 +202,24 @@ class DATALOADHIVER(object):
     def set_cmd(self, cmd):
         self.cmd = cmd
 
+    def get_cmd(self):
+        return self.cmd
+
     # 设置和iveserver_ip
     def set_hiveserver2_ip(self, hiveserver2_ip):
         self.hiveserver2_ip = hiveserver2_ip
 
     # 设置和iveserver_port
+    def get_hiveserver2_ip(self):
+        return self.hiveserver2_ip
+
+    # 设置和iveserver_port
     def set_hiveserver2_port(self, hiveserver2_port):
         self.hiveserver2_port = hiveserver2_port
+
+    # 设置和iveserver_port
+    def get_hiveserver2_port(self):
+        return self.hiveserver2_port
 
     # 配置文件分析
     def __parser__(self):
@@ -248,14 +263,30 @@ class DATALOADHIVER(object):
         except Exception as e:
             print("hiveut_main,KERBEROS: ", e)
 
-        cmd = self.cmd
+        cmd = self.get_cmd()
+        hiveserver2_ip = self.get_hiveserver2_ip()
+        hiveserver2_port = self.get_hiveserver2_port()
+        print("dataLoad.py hiveserver2_ip: ", hiveserver2_ip)
+        print("dataLoad.py hiveserver2_port: ", hiveserver2_port)
 
-        hiver = hvut.HIVEUTILS(host=self.hiveserver2_ip,
-                               port=self.hiveserver2_port,
+        hiver = hvut.HIVEUTILS(host=hiveserver2_ip,
+                               port=hiveserver2_port,
                                auth=auth,
                                database=self.database,
                                kerberos_service_name="hive",
                                cmd=cmd)
+
+        krb5conf = self.get_krb5conf()
+        hiver.set_krb5conf(krb5conf)
+
+        client_keytab = self.get_client_keytab()
+        hiver.set_client_keytab(client_keytab)
+
+        name = self.get_name()
+        hiver.set_name(name)
+
+        client_keytab_principle = self.get_client_keytab_principle()
+        hiver.set_client_keytab_principle(client_keytab_principle)
 
         hiver.cnn()
         hiver.cursor_self()
@@ -275,3 +306,30 @@ class DATALOADHIVER(object):
 
     def set_csv_filepath(self, csv_filepath):
         self.csv_filepath = csv_filepath
+
+    def get_csv_filepath(self):
+        return self.csv_filepath
+
+    def get_krb5conf(self):
+        return self.krb5conf
+
+    def set_krb5conf(self, krb5conf):
+        self.krb5conf = krb5conf
+
+    def get_client_keytab(self):
+        return self.client_keytab
+
+    def set_client_keytab(self, client_keytab):
+        self.client_keytab = client_keytab
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_name(self):
+        return self.name
+
+    def get_client_keytab_principle(self):
+        return self.client_keytab_principle
+
+    def set_client_keytab_principle(self, client_keytab_principle):
+        self.client_keytab_principle = client_keytab_principle

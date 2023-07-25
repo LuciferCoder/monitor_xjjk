@@ -76,22 +76,30 @@ class DATAHIVEWRITER(object):
         # json数据文件
         self.dataload_hive_json_filenamePath = None
         self.datestring = None
-        # /csv/202307192313_hive.csv
-        self.csv_filepath = BASE_DIR + "%s/%s_%s.csv" % (self.json_path, self.datestring, self.bigdata_name)
-        self.final_csv_filepath = BASE_DIR + "/%s/%s.scv" % (self.json_path, self.datestring)
+        # /csv/202307192313.csv
+        self.csv_filepath = BASE_DIR + "%s/%s.csv" % (self.json_path, self.datestring)
+        # self.final_csv_filepath = BASE_DIR + "/%s/%s.scv" % (self.json_path, self.datestring)
+        self.final_csv_filepath = self.csv_filepath
         self.table_fields_list = None
-        # 按照组件写完整的json文件
-        # self.csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.csv" % (self.bigdata_name,
-        #                                                            self.datestring,
-        #                                                            self.bigdata_name)
-        # csv文件
-        # self.json_csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.json" % (self.bigdata_name,
-        #                                                                  self.datestring,
-        #                                                                  self.bigdata_name)
+
+        # "/dataload/csv/%s/%s_%s.json"
+        self.csv_file = None
 
         self.dataloader = dataLoad.DATALOADHIVER()
         self.hiveserver2_ip = None
         self.hiveserver2_port = None
+
+    def set_final_csv_filepath(self, final_csv_filepath):
+        self.final_csv_filepath = final_csv_filepath
+
+    def get_final_csv_filepath(self):
+        return self.final_csv_filepath
+
+    def set_csv_file(self, csv_file):
+        self.csv_file = csv_file
+
+    def get_csv_file(self):
+        return self.csv_file
 
     def set_self_cmd(self, cmd):
         self.cmd = cmd
@@ -102,8 +110,14 @@ class DATAHIVEWRITER(object):
     def set_hiveserver2_ip(self, hiveserver2_ip):
         self.hiveserver2_ip = hiveserver2_ip
 
+    def get_hiveserver2_ip(self):
+        return self.hiveserver2_ip
+
     def set_hiveserver2_port(self, hiveserver2_port):
         self.hiveserver2_port = hiveserver2_port
+
+    def get_hiveserver2_port(self):
+        return self.hiveserver2_port
 
     # 传入值 dataload_hive_json_filenamePath
     def set_dataload_hive_json_filenamePath(self, dataload_hive_json_filenamePath):
@@ -136,6 +150,9 @@ class DATAHIVEWRITER(object):
     def set_dataload_time(self, dataload_time):
         self.dataload_time = dataload_time
 
+    def get_dataload_time(self):
+        return self.dataload_time
+
     # 分析字段列表
     def analyse_table_fields(self):
         filepath = self.table_fields_jsonpath
@@ -151,9 +168,13 @@ class DATAHIVEWRITER(object):
     def read_jsonfile(self):
         file = self.dataload_hive_json_filenamePath
         try:
+            datestring = self.get_datestring()
             jsonfile_name_path = BASE_DIR + "/dataload/csv/%s/%s_%s.json" % (self.bigdata_name,
-                                                                             self.datestring,
+                                                                             datestring,
                                                                              self.bigdata_name)
+            # 传参
+            self.set_csv_file(jsonfile_name_path)
+
             with open(file, 'r', encoding='utf-8') as file:
                 jsonfile_conts = file.readlines()
                 for jsonfile_cont in jsonfile_conts:
@@ -190,17 +211,17 @@ class DATAHIVEWRITER(object):
 
                     # 将生成的完整的json数据写入到json文件中
                     # jsonfile_name_path:  /export/monitor_xjjk/dataload/csv/None/None_None.json
-                    print(jsonfile_name_path)
-                    with open(jsonfile_name_path, 'a', encoding='utf-8') as jsonfile:
-                        jsonfile.write(str(fields_list_dic).replace("'", "\"")+'\n')
+                    # print(jsonfile_name_path)
+                    csv_filepath = self.get_csv_file()
+                    with open(csv_filepath, 'a', encoding='utf-8') as jsonfile:
+                        jsonfile.write(str(fields_list_dic).replace("'", "\"") + '\n')
                         jsonfile.close()
                 file.close()
 
             # 将生成的全部字段的json文件的值写入到csv文件中，逗号分隔
             # csv_file = self.csv_file
-            csv_file = BASE_DIR + "/dataload/csv/%s/%s_%s.csv" % (self.bigdata_name,
-                                                                  self.datestring,
-                                                                  self.bigdata_name)
+            csv_file = self.get_csv_file().strip().replace(".json", ".csv")
+
             with open(csv_file, 'a', encoding='utf-8') as f:
                 # jsonfile_name_path = jsonfile_name_path
                 csv_writer = csv.writer(f)
@@ -209,18 +230,51 @@ class DATAHIVEWRITER(object):
                     for cont in conts:
                         json_cont = json.loads(cont)
                         csv_writer.writerow(json_cont.values())
+                    # csv_writer.close()
                     file.close()
                 f.close()
 
+            # 追加写入数据到csv目录下日期下的日期.csv文件
+            # 创建时间日期文件夹
+            path = BASE_DIR + "/csv/%s" % datestring.strip()[0:8]
+            if os.path.exists(path):
+                pass
+            else:
+                os.mkdir(path)
+            # 将数据追加写入到路径 /csv/$(date +%Y%m%f)/$(date +%Y%m%d).csv
+            final_csv_all_path = path + "/%s.csv" % datestring.strip()[0:8]
+            self.set_final_csv_filepath(final_csv_all_path)
+            csv_filepath = self.get_final_csv_filepath()
+            with open(csv_filepath, 'a', encoding='utf-8') as ff:
+                csv_writer = csv.writer(ff)
+                with open(jsonfile_name_path, 'r', encoding='utf-8') as file:
+                    conts = file.readlines()
+                    for cont in conts:
+                        json_cont = json.loads(cont)
+                        csv_writer.writerow(json_cont.values())
+                    # csv_writer.close()
+                    file.close()
+                ff.close()
+
             # 设置变量，判断时分来进行导入数据
-            if str(self.dataload_time).strip().replace(":", "") == str(self.datestring).strip()[8:-2]:
+            dataload_time = self.get_dataload_time()
+            datestring = self.get_datestring()
+            if str(dataload_time).strip().replace(":", "") == str(datestring).strip()[8:-2]:
                 print("datahiveWriter: ", self.dataload_time.strip().replace(":", ""), " ",
                       self.datestring.strip()[8:-2])
-                self.dataloader.set_hiveserver2_ip(self.hiveserver2_ip)
-                self.dataloader.set_hiveserver2_port(self.hiveserver2_port)
-                self.dataloader.set_csv_filepath(self.json_csv_file)
+                hiveserver2_ip = self.get_hiveserver2_ip()
+                hiveserver2_port = self.get_hiveserver2_port()
+                print("datahiveWriter.py hiveserver2_ip： ", hiveserver2_ip)
+                print("datahiveWriter.py hiveserver2_port： ", hiveserver2_port)
+
+                self.dataloader.set_hiveserver2_ip(hiveserver2_ip)
+                self.dataloader.set_hiveserver2_port(hiveserver2_port)
+                # 传参：/csv/$(date +%y%m%d)/path.csv
+                csv_file_path = self.get_csv_file()
+                self.dataloader.set_csv_filepath(csv_file_path)
                 self.dataloader.set_cmd(cmd=self.cmd)
                 self.dataloader.loaddata_main()
 
         except Exception as e:
-            print("read_jsonfile: ", e)
+            print("read_jsonfile: " + e)
+            # print("read_jsonfile: ", e)
