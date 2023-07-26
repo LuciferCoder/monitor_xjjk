@@ -734,18 +734,35 @@ def main_one():
         print("hiveserver2_ip: ", hiveserver2_ip)
         datahivewriter.set_hiveserver2_ip(hiveserver2_ip)
         datahivewriter.set_hiveserver2_port(hiver.hiveserver2_node_port)
-        print("datahivewriter.set_hiveserver2_ip: ",datahivewriter.get_hiveserver2_ip())
-        print("datahivewriter.set_hiveserver2_port: ",datahivewriter.get_hiveserver2_port())
+        print("datahivewriter.set_hiveserver2_ip: ", datahivewriter.get_hiveserver2_ip())
+        print("datahivewriter.set_hiveserver2_port: ", datahivewriter.get_hiveserver2_port())
 
+        """
+        传参数到hiveUtils,进行kerberos认证
+        来源路线：hivePD --> datahivewriter --> dataLoad -->hiveUtils
+        """
+        krb5conf = hiver.krb5conf
+        datahivewriter.set_krb5conf(krb5conf)
 
+        client_keytab = hiver.client_keytab
+        datahivewriter.set_client_keytab(client_keytab)
+
+        name = hiver.name
+        datahivewriter.set_cluster_name(name)
+
+        client_keytab_principle = hiver.client_keytab_principle
+        datahivewriter.set_client_keytab_principle(client_keytab_principle)
 
         print("hiver.hiveserver2_node_list[0]: ", hiver.hiveserver2_node_list[0])
         print("hiver.hiveserver2_node_port: ", hiver.hiveserver2_node_port)
-        cmd = "load data local inpath '%s' into table %s.%s partition dt='%s';" % (datahivewriter.get_csv_filepath(),
-                                                                                   datahivewriter.dataloader.database,
-                                                                                   datahivewriter.dataloader.table_name,
-                                                                                   hiver.datenowdate)
-        #
+        datahivewriter.set_csv_filepath()
+        # 命令可以执行，但是文件需要在hiveserver2的ip服务器上，
+        # 需要再编写将文件传输到hiveserver2的方法
+        # 或者采用去掉local的方法，将文件上传到hdfs上
+        cmd = "load data local inpath '%s' into table %s.%s partition(dt='%s');" % (datahivewriter.get_csv_filepath(),
+                                                                                    datahivewriter.dataloader.database,
+                                                                                    datahivewriter.dataloader.table_name,
+                                                                                    hiver.datenowdate)
 
         print(cmd)
         datahivewriter.set_self_cmd(cmd=cmd)

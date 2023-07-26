@@ -77,7 +77,10 @@ class DATAHIVEWRITER(object):
         self.dataload_hive_json_filenamePath = None
         self.datestring = None
         # /csv/202307192313.csv
-        self.csv_filepath = BASE_DIR + "%s/%s.csv" % (self.json_path, self.datestring)
+        # self.csv_filepath = BASE_DIR + "%s/%s/%s.csv" % (self.json_path,
+        #                                                  self.get_datestring()[0:8],
+        #                                                  self.get_datestring())
+        self.csv_filepath = None
         # self.final_csv_filepath = BASE_DIR + "/%s/%s.scv" % (self.json_path, self.datestring)
         self.final_csv_filepath = self.csv_filepath
         self.table_fields_list = None
@@ -88,6 +91,44 @@ class DATAHIVEWRITER(object):
         self.dataloader = dataLoad.DATALOADHIVER()
         self.hiveserver2_ip = None
         self.hiveserver2_port = None
+
+        # 认证所需要的的参数
+        self.name = None
+        self.client_keytab_principle = None
+        self.client_keytab = None
+        self.krb5conf = None
+
+    def set_csv_filepath(self):
+        self.csv_filepath = BASE_DIR + "%s/%s/%s.csv" % (self.json_path,
+                                                         str(self.get_datestring())[0:8],
+                                                         str(self.get_datestring())[0:8])
+
+    def get_csv_filepath(self, csv_filepath):
+        return self.csv_filepath
+
+    def set_cluster_name(self, name):
+        self.name = name
+
+    def get_cluster_name(self):
+        return self.name
+
+    def set_client_keytab_principle(self, client_keytab_principle):
+        self.client_keytab_principle = client_keytab_principle
+
+    def get_client_keytab_principle(self):
+        return self.client_keytab_principle
+
+    def set_krb5conf(self, krb5conf):
+        self.krb5conf = krb5conf
+
+    def get_krb5conf(self):
+        return self.krb5conf
+
+    def set_client_keytab(self, krb5conf):
+        self.krb5conf = krb5conf
+
+    def get_client_keytab(self):
+        return self.krb5conf
 
     def set_final_csv_filepath(self, final_csv_filepath):
         self.final_csv_filepath = final_csv_filepath
@@ -266,6 +307,22 @@ class DATAHIVEWRITER(object):
                 hiveserver2_port = self.get_hiveserver2_port()
                 print("datahiveWriter.py hiveserver2_ip： ", hiveserver2_ip)
                 print("datahiveWriter.py hiveserver2_port： ", hiveserver2_port)
+
+                """
+                传参数到hiveUtils,进行kerberos认证
+                来源路线：hivePD --> datahivewriter --> dataLoad -->hiveUtils
+                """
+                krb5conf = self.get_krb5conf()
+                self.dataloader.set_krb5conf(krb5conf)
+
+                client_keytab = self.get_client_keytab()
+                self.dataloader.set_client_keytab(client_keytab)
+
+                name = self.get_cluster_name()
+                self.dataloader.set_cluster_name(name)
+
+                client_keytab_principle = self.get_client_keytab_principle()
+                self.dataloader.set_client_keytab_principle(client_keytab_principle)
 
                 self.dataloader.set_hiveserver2_ip(hiveserver2_ip)
                 self.dataloader.set_hiveserver2_port(hiveserver2_port)

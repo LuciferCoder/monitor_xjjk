@@ -275,15 +275,18 @@ class DATALOADHIVER(object):
                                database=self.database,
                                kerberos_service_name="hive",
                                cmd=cmd)
-
+        """
+        传参数到hiveUtils,进行kerberos认证
+        来源路线：hivePD --> datahivewriter --> dataLoad -->hiveUtils
+        """
         krb5conf = self.get_krb5conf()
         hiver.set_krb5conf(krb5conf)
 
         client_keytab = self.get_client_keytab()
         hiver.set_client_keytab(client_keytab)
 
-        name = self.get_name()
-        hiver.set_name(name)
+        name = self.get_cluster_name()
+        hiver.set_cluster_name(name)
 
         client_keytab_principle = self.get_client_keytab_principle()
         hiver.set_client_keytab_principle(client_keytab_principle)
@@ -322,10 +325,10 @@ class DATALOADHIVER(object):
     def set_client_keytab(self, client_keytab):
         self.client_keytab = client_keytab
 
-    def set_name(self, name):
+    def set_cluster_name(self, name):
         self.name = name
 
-    def get_name(self):
+    def get_cluster_name(self):
         return self.name
 
     def get_client_keytab_principle(self):

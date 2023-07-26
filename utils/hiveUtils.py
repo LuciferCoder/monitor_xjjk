@@ -35,10 +35,14 @@ class HIVEUTILS(object):
         # self.cmd = None
         self.cmd = cmd
 
-    def set_name(self, name):
+    """
+        传参数到hiveUtils,进行kerberos认证
+        来源路线：hivePD --> datahivewriter --> dataLoad -->hiveUtils
+    """
+    def set_cluster_name(self, name):
         self.name = name
 
-    def get_name(self):
+    def get_cluster_name(self):
         return self.name
 
     def set_client_keytab_principle(self, client_keytab_principle):
@@ -80,7 +84,8 @@ class HIVEUTILS(object):
         keytab_file = self.get_client_keytab()
         # principle = self.client_keytab_principle
         principle = self.get_client_keytab_principle()
-        os.environ['KRB5CCNAME'] = os.path.join(BASE_DIR, f'keytab/krb5cc_%s' % (self.name))
+        name = self.get_cluster_name()
+        os.environ['KRB5CCNAME'] = os.path.join(BASE_DIR, f'keytab/krb5cc_%s' % (name))
         kconfig = krbticket.KrbConfig(principal=principle, keytab=keytab_file)
         krbticket.KrbCommand.kinit(kconfig)
         # cont = krbticket.KrbTicket.get(keytab=keytab_file,principal=principle)
@@ -126,3 +131,4 @@ class HIVEUTILS(object):
     def cursor_close(self):
         cursor = self.cursor
         cursor.close()
+

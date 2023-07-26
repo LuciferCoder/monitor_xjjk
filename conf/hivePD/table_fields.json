@@ -31,6 +31,7 @@
         "NodeManager_healthy",
         "yarn_nospace",
         "Apppending_longten",
-        "rootqueue_usage_percent"
+        "rootqueue_usage_percent",
+        "dt"
     ]
 }
