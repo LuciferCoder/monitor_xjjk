@@ -5,6 +5,10 @@ import krbticket
 # import hdfs
 from pyhdfs import HdfsClient
 
+from datetime import datetime, timedelta
+
+
+
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -145,3 +149,55 @@ class HDFSFILETUTILS(object):
 
     def set_hdfsport(self, hdfsport):
         self.hdfsport = hdfsport
+
+
+def main():
+    # 初始化
+    hdfsfileutiler = HDFSFILETUTILS()
+    datenow = datetime.now()
+    hdfsfileutiler.set_date("")
+    # datenowstring = datenow.strftime("%Y%m%d%H%M%S")
+    datenowdate = datenow.strftime("%Y%m%d")
+    # datenowtime = datenow.strftime("%H%M%S")
+    hdfsfileutiler.set_date(datenowdate)
+    hdfsfileutiler.set_hdfshost("10.0.0.47")
+    hdfsfileutiler.set_hdfsport("50470")
+    path = "/export/monitor_xjjk/csv/20230726/20230726.csv"
+    hdfsfileutiler.set_csv_filepath(path)
+    hdfsfileutiler.set_client_keytab("/export/kerberos/1/hdfs.keytab")
+    hdfsfileutiler.set_client_keytab_principle("hdfs/ocean@JD.COM")
+    hdfsfileutiler.set_krb5conf("/etc/krb5.conf")
+    hdfsfileutiler.krb5init()
+    hdfsfileutiler.set_hdfs_client()
+
+    hdfsfileutiler.hdfsmkdir()
+    hdfsfileutiler.hdfsput()
+
+
+if __name__ == '__main__':
+    main()
+
+
+from hdfs.ext.kerberos import KerberosClient
+hdfs_client = KerberosClient('https://10.0.0.47:50470;https://10.0.0.45:50470')
+hdfs_client.status("/")
+
+
+"""
+测试成功
+"""
+from hdfs.ext.kerberos import KerberosClient
+import requests
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+session = requests.Session()
+session.verify = False
+
+client = KerberosClient(url='https://10.0.0.45:50470', session=session,mutual_auth='REQUIRED',principal='hdfs/ocean@JD.COM')
+client.acl_status()
+client.upload(hdfs_path="/tmp/monitor/", local_path="/export/")
+client.set_permission()
+
+print(client.list('/'))

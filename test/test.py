@@ -1,8 +1,7 @@
-
 date_list = []
 while True:
     try:
-        m=input().split('-')
+        m = input().split('-')
         date_list.append(m)
     except:
         break

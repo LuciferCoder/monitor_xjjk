@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 
 # 数据导入到mysql
 import dataLoad
+from bin import dataLoad
 
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
@@ -35,9 +36,9 @@ class HIVER(object):
         self.BASE_DIR = BASE_DIR
         self.jsonfile_path = self.BASE_DIR + "/conf/hivePD/hive.json"
         name, version, cluster_name, hiveconf, krb5conf, client_keytab, \
-            client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
-            hiveserver2_node_list, hiveserver2_node_port, \
-            metastore_node_list, metastore_node_port, dataload_type, dataload_time = self._json_parse()
+        client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
+        hiveserver2_node_list, hiveserver2_node_port, \
+        metastore_node_list, metastore_node_port, dataload_type, dataload_time = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -153,8 +154,8 @@ class HIVER(object):
             dataload_time = load_dict["dependencies"]["config"]["dataload_time"]
 
             return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
-                use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-                metastore_node_list, metastore_node_port, dataload_type, dataload_time
+                   use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
+                   metastore_node_list, metastore_node_port, dataload_type, dataload_time
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -756,6 +757,10 @@ def main_one():
         print("hiver.hiveserver2_node_list[0]: ", hiver.hiveserver2_node_list[0])
         print("hiver.hiveserver2_node_port: ", hiver.hiveserver2_node_port)
         datahivewriter.set_csv_filepath()
+
+        """
+        上传文件到hdfs
+        """
         # 命令可以执行，但是文件需要在hiveserver2的ip服务器上，
         # 需要再编写将文件传输到hiveserver2的方法
         # 或者采用去掉local的方法，将文件上传到hdfs上
