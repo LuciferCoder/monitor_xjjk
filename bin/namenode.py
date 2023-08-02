@@ -55,7 +55,8 @@ from conf import Logger as Logger
 # warnings.filterwarnings('ignore')
 
 # 数据导入到mysql
-import dataLoad
+# import dataLoad
+from bin import dataLoad
 
 
 class HDFSCHECk(object):
@@ -65,8 +66,8 @@ class HDFSCHECk(object):
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/hdfs/hdfs.json"
         name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, \
-            nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
-            nn1_hostname, nn2_hostname = self._json_parse()
+        nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
+        nn1_hostname, nn2_hostname = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -183,8 +184,8 @@ class HDFSCHECk(object):
             # nodemanager_list = load_dict["dependencies"]["hadoop_nodes"]["nodemanager"]
 
             return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, \
-                nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
-                nn1_hostname, nn2_hostname
+                   nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
+                   nn1_hostname, nn2_hostname
 
     # 认证krb5
     # 如果使用了kerberos，调用此方法
@@ -478,16 +479,15 @@ class HDFSCHECk(object):
         namenode_heap_used_percent = None
         PercentUsed = None
         LiveNodes = None
-        livenodes_num=None
+        livenodes_num = None
         DeadNodes = None
         VolumeFailuresTotal = None
         # 已使用的大小
-        CapacityUsedGB=None
+        CapacityUsedGB = None
 
         date = self.datenowdate
         time = self.datenowtime
         bigdata_component = self.name
-
 
         # print(beans)
         for dic in beans:
@@ -629,15 +629,15 @@ class HDFSCHECk(object):
         # 集群指标
         json_string = '{"hdfs_usage":"%s","alive_nodes":"%s","dead_nodes":"%s","volume_failure":"%s",' \
                       '"heap_usage":"%s","date":"%s","time":"%s","bigdata_component":"%s"}' % (
-            hdfs_usage,
-            alive_nodes,
-            dead_nodes,
-            volume_failure,
-            heap_usage,
-            date,
-            time,
-            bigdata_component
-        )
+                          hdfs_usage,
+                          alive_nodes,
+                          dead_nodes,
+                          volume_failure,
+                          heap_usage,
+                          date,
+                          time,
+                          bigdata_component
+                      )
         self.jsondata_writer(json_string)
 
     """
@@ -816,11 +816,11 @@ class HDFSCHECk(object):
                 bigdata_component = self.name
                 hdfs_added = hdfs_cap_added
                 json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
-                                  date,
-                                  time,
-                                  hdfs_added,
-                                  bigdata_component
-                              )
+                    date,
+                    time,
+                    hdfs_added,
+                    bigdata_component
+                )
                 self.jsondata_writer(json_string)
 
             else:
@@ -852,11 +852,11 @@ class HDFSCHECk(object):
                 bigdata_component = self.name
                 hdfs_added = 0
                 json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
-                                  date,
-                                  time,
-                                  hdfs_added,
-                                  bigdata_component
-                              )
+                    date,
+                    time,
+                    hdfs_added,
+                    bigdata_component
+                )
                 self.jsondata_writer(json_string)
 
         # 判定为手动执行， false时
@@ -921,11 +921,11 @@ class HDFSCHECk(object):
                 bigdata_component = self.name
                 hdfs_added = hdfs_cap_added
                 json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
-                                  date,
-                                  time,
-                                  hdfs_added,
-                                  bigdata_component
-                              )
+                    date,
+                    time,
+                    hdfs_added,
+                    bigdata_component
+                )
                 self.jsondata_writer(json_string)
             else:
                 # 如果不存在，则视为第一次运行
@@ -949,11 +949,11 @@ class HDFSCHECk(object):
                 bigdata_component = self.name
                 hdfs_added = 0
                 json_string = '{"date":"%s","time":"%s","hdfs_added":"%s","bigdata_component":"%s"}' % (
-                                  date,
-                                  time,
-                                  hdfs_added,
-                                  bigdata_component
-                              )
+                    date,
+                    time,
+                    hdfs_added,
+                    bigdata_component
+                )
                 self.jsondata_writer(json_string)
 
     def dataAllwriter(self):
@@ -1109,7 +1109,7 @@ def main_one():
         namenode_ha_status = 2
         ip = checker.nn2
         hostname = checker.nn2_hostname
-        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
                       '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
                                                                                       time,
                                                                                       bigdata_component,

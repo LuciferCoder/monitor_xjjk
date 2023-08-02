@@ -813,13 +813,6 @@ def main_one():
         datahivewriter.set_self_cmd(cmd=cmd)
         datahivewriter.read_jsonfile()
 
-
-        # # 创建目录
-        # hdfser.hdfsmkdir()
-        # # 上传文件,
-        # hdfser.hdfsput()
-        # hdfs 删除文件
-        # hdfser.hdfsdel()
     else:
         print("other database need to add!")
 
