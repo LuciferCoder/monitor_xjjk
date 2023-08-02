@@ -18,9 +18,9 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
-# 数据导入到mysql
-import dataLoad
-from bin import dataLoad
+
+
+
 
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
@@ -29,6 +29,12 @@ sys.path.append(BASE_DIR)
 
 from utils import datamysqlWriter as mysqlwriter
 from utils import datahiveWriter as hivewriter
+# 数据导入到mysql
+# import dataLoad
+from bin import dataLoad
+
+# 上传文件到hdfs
+from utils import hdfsFileUtils as hdfsfiler
 
 
 class HIVER(object):
@@ -38,7 +44,8 @@ class HIVER(object):
         name, version, cluster_name, hiveconf, krb5conf, client_keytab, \
         client_keytab_principle, use_kerberos, ssh_user, ssh_pkey, \
         hiveserver2_node_list, hiveserver2_node_port, \
-        metastore_node_list, metastore_node_port, dataload_type, dataload_time = self._json_parse()
+        metastore_node_list, metastore_node_port, dataload_type, dataload_time, namenode_ip, \
+        namenode_webport, hdfs_principle, hdfs_keytab = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -52,6 +59,10 @@ class HIVER(object):
         self.metastore_node_port = metastore_node_port
         self.dataload_type = dataload_type
         self.dataload_time = dataload_time
+        self.namenode_ip = namenode_ip
+        self.namenode_webport = namenode_webport
+        self.hdfs_principle = hdfs_principle
+        self.hdfs_keytab = hdfs_keytab
 
         # self.hiveconf = hiveconf
 
@@ -153,9 +164,16 @@ class HIVER(object):
             dataload_type = load_dict["dependencies"]["config"]["dataload_type"]
             dataload_time = load_dict["dependencies"]["config"]["dataload_time"]
 
+            # hdfsnamenode相关信息，用来上传文件到hdfs用
+            namenode_ip = load_dict["dependencies"]["hdfs"]["namenode_ip"]
+            namenode_webport = load_dict["dependencies"]["hdfs"]["namenode_webport"]
+            hdfs_principle = load_dict["dependencies"]["hdfs"]["hdfs_principle"]
+            hdfs_keytab = load_dict["dependencies"]["hdfs"]["hdfs_keytab"]
+
             return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
                    use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
-                   metastore_node_list, metastore_node_port, dataload_type, dataload_time
+                   metastore_node_list, metastore_node_port, dataload_type, dataload_time, namenode_ip, \
+                   namenode_webport, hdfs_principle,hdfs_keytab
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -761,17 +779,47 @@ def main_one():
         """
         上传文件到hdfs
         """
+        hdfser = hdfsfiler.HDFSFILETUTILS()
+        hdfser.set_date(hiver.datenowstring)
+        hdfser.set_hdfshost("%s" % hiver.namenode_ip)
+        hdfser.set_hdfsport("%s" % hiver.namenode_webport)
+        hdfser.set_krb5conf(hiver.krb5conf)
+        hdfser.set_client_keytab_principle("%s" % hiver.hdfs_principle)
+        hdfser.set_csv_filepath(datahivewriter.get_csv_filepath())
+        hdfser.set_client_keytab("%s" % hiver.hdfs_keytab)
+        hdfser.set_hdfs_client()
+
+        # # hdfs需要的用户初始化
+        # hdfser.krb5init()
+
+        client = hdfser.get_hdfs_client()
+        # 创建目录以及上传文件的操作需要在执行命令之前上传到hdfs上；传参数到dataloader中进行操作hdfs的文件上传
+        datahivewriter.dataloader.set_hdfsclient(hdfser)
+
+
         # 命令可以执行，但是文件需要在hiveserver2的ip服务器上，
         # 需要再编写将文件传输到hiveserver2的方法
         # 或者采用去掉local的方法，将文件上传到hdfs上
-        cmd = "load data local inpath '%s' into table %s.%s partition(dt='%s');" % (datahivewriter.get_csv_filepath(),
-                                                                                    datahivewriter.dataloader.database,
-                                                                                    datahivewriter.dataloader.table_name,
-                                                                                    hiver.datenowdate)
+
+        filename = os.path.basename(datahivewriter.get_csv_filepath())
+        hdfsfilepath = hdfser.get_hdfs_base_dir() + "/" + str(hiver.datenowdate) + "/%s" % filename
+
+        cmd = "load data inpath '%s' into table %s.%s partition(dt='%s')" % (hdfsfilepath,
+                                                                              datahivewriter.dataloader.database,
+                                                                              datahivewriter.dataloader.table_name,
+                                                                              hiver.datenowdate)
 
         print(cmd)
         datahivewriter.set_self_cmd(cmd=cmd)
         datahivewriter.read_jsonfile()
+
+
+        # # 创建目录
+        # hdfser.hdfsmkdir()
+        # # 上传文件,
+        # hdfser.hdfsput()
+        # hdfs 删除文件
+        # hdfser.hdfsdel()
     else:
         print("other database need to add!")
 

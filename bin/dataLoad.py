@@ -20,15 +20,16 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
-# 数据库导入到MySQL
-import utils.mysqlUtil as myut
-
-import utils.hiveUtils as hvut
-
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
+
+# 数据库导入到MySQL
+import utils.mysqlUtil as myut
+import utils.hiveUtils as hvut
+
+from utils import hdfsFileUtils as hdfsfiler
 
 
 # 使用mysql作为数据导入
@@ -37,8 +38,8 @@ class DATALOADER(object):
         self.BASE_DIR = BASE_DIR
         self.jsonfile_path = self.BASE_DIR + "/conf/dataload/dataload.json"
         name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
-            password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
-            datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset = self._json_parse()
+        password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
+        datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset = self._json_parse()
         self.name = name
         self.version = version
         self.usemysql = usemysql
@@ -94,8 +95,8 @@ class DATALOADER(object):
             datalaod_yarn_sql = load_dict["dependencies"]["mysql"]["dataload_yarn"]["sql"]
 
             return name, version, usemysql, use_pwd_coding, user, port, host, password_encoding, \
-                password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
-                datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset
+                   password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
+                   datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -174,30 +175,38 @@ class DATALOADHIVER(object):
         self.csv_filepath = None
         self.dataloadhiver_conf_file = BASE_DIR + "/conf/dataload/dataloadhiver.json"
         self.name, \
-            self.version, \
-            self.use_hive, \
-            self.use_pwd_coding, \
-            self.user, \
-            self.port, \
-            self.host, \
-            self.password_encoding, \
-            self.password, \
-            self.database, \
-            self.datalaod_hive_json, \
-            self.datalaod_hive_sql, \
-            self.datalaod_hdfs_json, \
-            self.datalaod_hdfs_sql, \
-            self.datalaod_yarn_json, \
-            self.datalaod_yarn_sql, \
-            self.table_name, \
-            self.charset, \
-            self.use_kerberos = self.__parser__()
+        self.version, \
+        self.use_hive, \
+        self.use_pwd_coding, \
+        self.user, \
+        self.port, \
+        self.host, \
+        self.password_encoding, \
+        self.password, \
+        self.database, \
+        self.datalaod_hive_json, \
+        self.datalaod_hive_sql, \
+        self.datalaod_hdfs_json, \
+        self.datalaod_hdfs_sql, \
+        self.datalaod_yarn_json, \
+        self.datalaod_yarn_sql, \
+        self.table_name, \
+        self.charset, \
+        self.use_kerberos = self.__parser__()
 
         # hiveserver2 IP地址、端口
         self.hiveserver2_ip = None
         self.hiveserver2_port = None
 
+        self.hdfsclient = None
+
         # 传递csv
+
+    def set_hdfsclient(self, hdfsclient):
+        self.hdfsclient = hdfsclient
+
+    def get_hdfsclient(self):
+        return self.hdfsclient
 
     def set_cmd(self, cmd):
         self.cmd = cmd
@@ -251,8 +260,8 @@ class DATALOADHIVER(object):
             datalaod_yarn_sql = load_dict["dependencies"]["hive"]["dataload_yarn"]["sql"]
 
             return name, version, usehive, use_pwd_coding, user, port, host, password_encoding, \
-                password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
-                datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset, use_kerberos
+                   password, database, datalaod_hive_json, datalaod_hive_sql, datalaod_hdfs_json, \
+                   datalaod_hdfs_sql, datalaod_yarn_json, datalaod_yarn_sql, table_name, charset, use_kerberos
 
     def hiveut_main(self):
         auth = None
@@ -293,7 +302,30 @@ class DATALOADHIVER(object):
 
         hiver.cnn()
         hiver.cursor_self()
+
+        # hdfser = hdfsfiler.HDFSFILETUTILS()
+
+        # hdfs上传文件
+
+        # hdfsclient = self.get_hdfsclient()
+        hdfsclient = self.get_hdfsclient()
+        # hdfs需要的用户初始化
+        hdfsclient.krb5init()
+        # # 创建目录
+        # hdfser.hdfsmkdir()
+        print("dataLoad: ", hdfsclient.get_hdfshost())
+        hdfsclient.hdfsmkdir()
+        # # 上传文件,
+        # hdfser.hdfsput()
+        hdfsclient.hdfsput()
+
+        hiver.krb5init()
+
         hiver.exec_cmd()
+
+        # hdfs 删除文件
+        hdfsclient.krb5init()
+        hdfsclient.hdfsdel()
 
         # cursor.execute('SELECT * FROM test_db.test_parquet')
         # print(cursor.fetchone())

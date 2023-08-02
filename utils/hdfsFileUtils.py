@@ -1,9 +1,14 @@
-from pyhive import hive
+#!/bin/env python3
+# -*- coding: utf-8 -*-
+
+
 import os
 import sys
 import krbticket
-# import hdfs
-from pyhdfs import HdfsClient
+from hdfs.ext.kerberos import KerberosClient
+import requests
+
+# import logging
 
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
@@ -24,7 +29,7 @@ class HDFSFILETUTILS(object):
         self.hdfsport = None
         # hdfs端口
         self.hdfshost = None
-        self.bigdata_comment_name = None
+        self.bigdata_comment_name = "HDFSFILETUTILS"
         # 此处应该是 hdfs/ocean
         self.client_keytab_principle = None
         # /export/kerberos/1/hdfs.keytab
@@ -36,6 +41,9 @@ class HDFSFILETUTILS(object):
         self.date_date = None
         # hdfs上传文件路径：/tmp/${date}/${filename}
         self.hdfs_client = None
+
+    def get_hdfs_base_dir(self):
+        return self.hdfs_base_dir
 
     def set_krb5conf(self, krb5conf):
         self.krb5conf = krb5conf
@@ -58,9 +66,23 @@ class HDFSFILETUTILS(object):
     # hdfs client
     def set_hdfs_client(self):
         # client = HdfsClient(hosts='localhost:50070')
+        # logging.basicConfig(level=logging.DEBUG)
+
+        """
+        测试成功
+        """
+
+        session = requests.Session()
+        session.verify = False
+
         host = self.get_hdfshost()
         port = self.get_hdfsport()
-        client = HdfsClient(hosts='%s:%s' % (host, port))
+        principle = self.get_client_keytab_principle()
+
+        client = KerberosClient(url='https://%s:%s' % (host, port),
+                                session=session,
+                                mutual_auth='REQUIRED',
+                                principal='%s' % principle)
         self.hdfs_client = client
 
     # 返回 hdfs client
@@ -86,12 +108,13 @@ class HDFSFILETUTILS(object):
     # 文件按上传
     def hdfsput(self):
         client = self.get_hdfs_client()
-        # client = HdfsClient(hosts="localhost:50070")
         datestr = str(self.get_date_date())[0:8]
         hdfs_base_dir = self.hdfs_base_dir
         dest_dir = "/".join([hdfs_base_dir, datestr])
         curfilepath = self.get_csv_filepath()
-        client.copy_from_local(localsrc=curfilepath, dest=dest_dir)
+        print("hdfs utils curfilepath: ", curfilepath)
+        print("hdfs utils hdfs_path: ", dest_dir)
+        client.upload(hdfs_path=dest_dir, local_path=curfilepath)
 
     # 文件下载，目前用不到，暂时不编辑
     def hfdsget(self):
@@ -107,7 +130,7 @@ class HDFSFILETUTILS(object):
         curfilepath = self.get_csv_filepath()
         filename = os.path.basename(curfilepath)
         path = dest_dir + "/" + filename
-        client.delete(path=path)
+        client.delete(hdfs_path=path)
 
     # 创建文件夹目录
     def hdfsmkdir(self):
@@ -119,7 +142,8 @@ class HDFSFILETUTILS(object):
         # curfilepath = self.get_csv_filepath()
         # filename = os.path.basename(curfilepath)
         # path = dest_dir + "/" + filename
-        client.mkdirs(dest_dir)
+        # client.mkdirs(dest_dir)
+        client.makedirs(hdfs_path=dest_dir, permission='755')
 
     # kerberos认证
     # 如果使用了kerberos，调用此方法

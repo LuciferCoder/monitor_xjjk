@@ -19,6 +19,12 @@
       "keytab": "/export/kerberos/1/hive.keytab",
       "client_principle": "hive/ocean@JD.COM"
     },
+    "hdfs": {
+      "namenode_ip": "10.0.0.45",
+      "namenode_webport": "50470",
+      "hdfs_principle": "hdfs/ocean@JD.COM",
+      "hdfs_keytab": "/export/kerberos/1/hdfs.keytab"
+    },
     "hivenodes": {
       "hiveserver2": {
         "hiveserverNodes": [

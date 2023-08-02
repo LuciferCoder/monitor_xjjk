@@ -103,7 +103,7 @@ class DATAHIVEWRITER(object):
                                                          str(self.get_datestring())[0:8],
                                                          str(self.get_datestring())[0:8])
 
-    def get_csv_filepath(self, csv_filepath):
+    def get_csv_filepath(self):
         return self.csv_filepath
 
     def set_cluster_name(self, name):
