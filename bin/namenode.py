@@ -34,7 +34,7 @@ import paramiko
 from datetime import datetime, timedelta
 
 import subprocess
-
+import csv
 # subprocess.run("ls -alhrt")
 
 """带有Kerberos认证的hdfs认证"""
@@ -62,12 +62,13 @@ from bin import dataLoad
 class HDFSCHECk(object):
 
     def __init__(self):
+
         self.BASE_DIR = BASE_DIR
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/hdfs/hdfs.json"
         name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, nn1, nn2, \
         nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
-        nn1_hostname, nn2_hostname = self._json_parse()
+        nn1_hostname, nn2_hostname, dataloadtype = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -80,6 +81,7 @@ class HDFSCHECk(object):
         self.nn2_port = nn2_port
         self.nn1_hostname = nn1_hostname
         self.nn2_hostname = nn2_hostname
+        self.dataloadtype = dataloadtype
 
         self.datanode_list = datanode_list
         self.hdfsconf = hdfsconf
@@ -135,6 +137,8 @@ class HDFSCHECk(object):
         # self.hdfs_usage=""
         # ## NameNode堆内存使用率 heap_usage
         # self.Namenode_HeapUsage=""
+        self.table_field_filepath = BASE_DIR + "/conf/hdfs/table_fields.json"
+        self.csv_filepath =  BASE_DIR +"/csv/%s/%s.csv" % (self.datenowdate, self.datenowdate)
 
     # 解析配置文件，获取hadoop节点信息(已完成，内部返回类中的变量使用)
     def _json_parse(self):
@@ -170,6 +174,7 @@ class HDFSCHECk(object):
 
             ssh_user = load_dict["dependencies"]["config"]["ssh_user"]
             ssh_pkey = load_dict["dependencies"]["config"]["ssh_pkey"]
+            dataloadtype = load_dict["dependencies"]["config"]["dataloadtype"]
 
             # ##rm
             # rm1 = load_dict["dependencies"]["hadoop_nodes"]["resourcemanager"]["rm1"]
@@ -185,7 +190,7 @@ class HDFSCHECk(object):
 
             return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, \
                    nn1, nn2, nn1_port, nn2_port, datanode_list, use_kerberos, ssh_user, ssh_pkey, \
-                   nn1_hostname, nn2_hostname
+                   nn1_hostname, nn2_hostname, dataloadtype
 
     # 认证krb5
     # 如果使用了kerberos，调用此方法
@@ -986,7 +991,10 @@ class HDFSCHECk(object):
         sqlfile.close()
 
         self.dataloader.set_sqllist(sqllisted=sqllist)
-        self.dataloader.loaddata_main()
+        if self.dataloadtype == "mysql":
+            self.dataloader.loaddata_main()
+        elif self.dataloadtype == "hive":
+            self.jsondataAllfields_writer()
 
     # 数据写入本地json文件
     # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
@@ -995,6 +1003,44 @@ class HDFSCHECk(object):
         with open(jsonfile, 'a', encoding="utf-8") as file:
             file.write(dicstring + "\n")
             file.close()
+
+    def jsondataAllfields_writer(self):
+        jsonfile = self.dataload_hdfs_json_filenamePath
+        # 读取hive的所有字段
+        tablefiledpath = self.table_field_filepath
+        file = open(tablefiledpath, 'r', encoding='utf-8')
+        tablefiledsjson = json.load(file)
+        tablefile_list = tablefiledsjson["fields"]
+        # fields_list_dic = "{" + '"' + '":"NULL","'.join(tablefile_list) + '":"NULL"' + "}\n"
+        # fields_list_dic = json.loads(fields_list_dic)
+        # print("tablefiledsdic: ",fields_list_dic)
+
+        with open(jsonfile, 'r', encoding="utf-8") as file:
+            lines = file.readlines()
+            for line in lines:
+                jsoncont = json.loads(str(line).replace("\'", "\""))
+                jsonfile_keys = jsoncont.keys()
+                fields_dic = "{" + '"' + '":"NULL","'.join(tablefile_list) + '":"NULL"' + "}\n"
+                fields_dic = json.loads(fields_dic)
+                print("fields_dic: ", fields_dic)
+
+                for key in jsonfile_keys:
+                    value = str(jsoncont[key]).replace("{}","NULL")
+                    # fields_list_dic[key] = jsonfile_cont[key]
+                    fields_dic["%s" % key] = value
+
+                print("fields_dic_added: ", fields_dic)
+                csv_filepath = self.csv_filepath
+
+                # 如果日期文件夹不存在，创建日期目录
+                if not os.path.exists(os.path.dirname(csv_filepath)):
+                    os.mkdir(os.path.dirname(csv_filepath))
+
+                # 将文件写入到csv文件中
+                with open(csv_filepath, 'a', encoding='utf-8') as jsonfile:
+                    csv_writer = csv.writer(jsonfile)
+                    csv_writer.writerow(fields_dic.values())
+                    jsonfile.close()
 
 
 # 主函数逻辑
@@ -1109,7 +1155,7 @@ def main_one():
         namenode_ha_status = 2
         ip = checker.nn2
         hostname = checker.nn2_hostname
-        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+        json_string = '{"date":"%s","time":"%s","bigdata_component":"%s","component_service":"%s",' \
                       '"ip":"%s","component_service_status":"%s","hostname":"%s"}' % (date,
                                                                                       time,
                                                                                       bigdata_component,
