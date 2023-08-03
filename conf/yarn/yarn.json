@@ -10,7 +10,8 @@
       "second": "5",
       "yarnconf": "yarn-site.xml",
       "ssh_user": "root",
-      "ssh_pkey": "/root/.ssh/id_rsa"
+      "ssh_pkey": "/root/.ssh/id_rsa",
+      "dataloadtype": "hive"
     },
     "kerberos": {
       "krb5conf": "/etc/krb5.conf",

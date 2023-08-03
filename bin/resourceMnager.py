@@ -5,6 +5,8 @@
 import warnings
 
 # 屏蔽本条语句之后所有的告警
+import csv
+
 warnings.filterwarnings("ignore")
 
 import os
@@ -60,6 +62,7 @@ class ResourceManager():
     # init 初始化内部变量,初始化内部参数
     def __init__(self):
         # yarn_nospace
+        # self.dataloadtype = None
         self.availableGaia = None
         # 队列监控
         self.rootQueue_usage_percent = None
@@ -78,8 +81,8 @@ class ResourceManager():
         # self.client = ""
         self.jsonfile_path = self.BASE_DIR + "/conf/yarn/yarn.json"
         name, version, cluster_name, yarnconf, krb5conf, client_keytab, client_keytab_principle, \
-            rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, \
-            nodemanagerJmxport, rm1_hostname, rm2_hostname = self._json_parse()
+        rm1, rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, \
+        nodemanagerJmxport, rm1_hostname, rm2_hostname, dataloadtype = self._json_parse()
         self.name = name
         self.version = version
         self.cluster_name = cluster_name
@@ -102,6 +105,7 @@ class ResourceManager():
         self.nodemanager_port = self.nodemanagerJmxport
         self.rm1_hostname = rm1_hostname
         self.rm2_hostname = rm2_hostname
+        self.dataloadtype = dataloadtype
 
         self.yarn_site_filepath = self.BASE_DIR + "/conf/yarn/%s" % self.yarnconf
         self.yarnsite_clustername = ""
@@ -173,6 +177,10 @@ class ResourceManager():
 
         # json配置文件分析
 
+        # csv文件写入数据相关
+        self.table_field_filepath = BASE_DIR + "/conf/yarn/table_fields.json"
+        self.csv_filepath = BASE_DIR + "/csv/%s/%s.csv" % (self.datenowdate, self.datenowdate)
+
     # 解析配置文件，获取hadoop yarn节点信息(已完成，内部返回类中的变量使用)
     # 创建类的对象时就初始化完成了yarn.json文件的分析
     def _json_parse(self):
@@ -215,10 +223,11 @@ class ResourceManager():
 
             # nodemanager_port
             nodemanagerJmxport = load_dict["dependencies"]["hadoop_nodes"]["nodemanagerJmxport"]
+            dataloadtype = load_dict["dependencies"]["config"]["dataloadtype"]
 
             return name, version, cluster_name, hdfsconf, krb5conf, client_keytab, client_keytab_principle, rm1, \
-                rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport, \
-                rm1_hostname, rm2_hostname
+                   rm2, rm1_port, rm2_port, nodemanager_list, use_kerberos, ssh_user, ssh_pkey, nodemanagerJmxport, \
+                   rm1_hostname, rm2_hostname, dataloadtype
 
     # yarn-site.xml文件处理，返回参数
     # 逻辑中尚未用到
@@ -1038,6 +1047,7 @@ class ResourceManager():
 
     # 此方法可以后期重构
     def dataAllwriter(self):
+        print("dataAllwriter: ","dataAllwriter")
         sqllist = []
         # 字典
         jsonfile = self.dataload_yarn_json_filenamePath
@@ -1064,7 +1074,14 @@ class ResourceManager():
         sqlfile.close()
 
         self.dataloader.set_sqllist(sqllisted=sqllist)
-        self.dataloader.loaddata_main()
+        if self.dataloadtype == "mysql":
+            print("dataloadtype: ", self.dataloadtype)
+            self.dataloader.loaddata_main()
+        elif self.dataloadtype == "hive":
+            print("dataloadtype: ",self.dataloadtype)
+            self.jsondataAllfields_writer()
+        else:
+            print(" self.dataloadtype: ", self.dataloadtype)
 
     # 数据写入本地json文件
     # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
@@ -1073,6 +1090,44 @@ class ResourceManager():
         with open(jsonfile, 'a', encoding="utf-8") as file:
             file.write(dicstring + "\n")
             file.close()
+
+    def jsondataAllfields_writer(self):
+        jsonfile = self.dataload_yarn_json_filenamePath
+        # 读取hive的所有字段
+        tablefiledpath = self.table_field_filepath
+        file = open(tablefiledpath, 'r', encoding='utf-8')
+        tablefiledsjson = json.load(file)
+        tablefile_list = tablefiledsjson["fields"]
+        # fields_list_dic = "{" + '"' + '":"NULL","'.join(tablefile_list) + '":"NULL"' + "}\n"
+        # fields_list_dic = json.loads(fields_list_dic)
+        # print("tablefiledsdic: ",fields_list_dic)
+
+        with open(jsonfile, 'r', encoding="utf-8") as file:
+            lines = file.readlines()
+            for line in lines:
+                jsoncont = json.loads(str(line).replace("\'", "\""))
+                jsonfile_keys = jsoncont.keys()
+                fields_dic = "{" + '"' + '":"NULL","'.join(tablefile_list) + '":"NULL"' + "}\n"
+                fields_dic = json.loads(fields_dic)
+                print("fields_dic: ", fields_dic)
+
+                for key in jsonfile_keys:
+                    value = str(jsoncont[key]).replace("{}", "NULL")
+                    # fields_list_dic[key] = jsonfile_cont[key]
+                    fields_dic["%s" % key] = value
+
+                print("fields_dic_added: ", fields_dic)
+                csv_filepath = self.csv_filepath
+
+                # 如果日期文件夹不存在，创建日期目录
+                if not os.path.exists(os.path.dirname(csv_filepath)):
+                    os.mkdir(os.path.dirname(csv_filepath))
+
+                # 将文件写入到csv文件中
+                with open(csv_filepath, 'a', encoding='utf-8') as jsonfile:
+                    csv_writer = csv.writer(jsonfile)
+                    csv_writer.writerow(fields_dic.values())
+                    jsonfile.close()
 
 
 # 主函数逻辑
