@@ -317,6 +317,7 @@ class DATALOADHIVER(object):
         hdfsclient.hdfsmkdir()
         # # 上传文件,
         # hdfser.hdfsput()
+        # 上传的文件为前一天的文件，当前方法中获取到的文件目录日期为当前时间的；方法中进一步处理
         hdfsclient.hdfsput()
 
         hiver.krb5init()

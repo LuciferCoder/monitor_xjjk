@@ -744,17 +744,17 @@ def main_one():
         datahivewriter = hivewriter.DATAHIVEWRITER()
         datahivewriter.set_dataload_hive_json_filenamePath(hiver.dataload_hive_json_filenamePath)
         datahivewriter.set_bigdata_name(hiver.name)
-        print(datahivewriter.bigdata_name)
+        # print(datahivewriter.bigdata_name)
         datahivewriter.set_datestring(hiver.datenowstring)
-        print(datahivewriter.datestring)
+        # print(datahivewriter.datestring)
         datahivewriter.analyse_table_fields()
         datahivewriter.set_dataload_time(hiver.dataload_time)
         hiveserver2_ip = json.loads(str(hiver.hiveserver2_node_list[0]).replace("\'", "\""))["ip"]
-        print("hiveserver2_ip: ", hiveserver2_ip)
+        # print("hiveserver2_ip: ", hiveserver2_ip)
         datahivewriter.set_hiveserver2_ip(hiveserver2_ip)
         datahivewriter.set_hiveserver2_port(hiver.hiveserver2_node_port)
-        print("datahivewriter.set_hiveserver2_ip: ", datahivewriter.get_hiveserver2_ip())
-        print("datahivewriter.set_hiveserver2_port: ", datahivewriter.get_hiveserver2_port())
+        # print("datahivewriter.set_hiveserver2_ip: ", datahivewriter.get_hiveserver2_ip())
+        # print("datahivewriter.set_hiveserver2_port: ", datahivewriter.get_hiveserver2_port())
 
         """
         传参数到hiveUtils,进行kerberos认证
@@ -772,8 +772,8 @@ def main_one():
         client_keytab_principle = hiver.client_keytab_principle
         datahivewriter.set_client_keytab_principle(client_keytab_principle)
 
-        print("hiver.hiveserver2_node_list[0]: ", hiver.hiveserver2_node_list[0])
-        print("hiver.hiveserver2_node_port: ", hiver.hiveserver2_node_port)
+        # print("hiver.hiveserver2_node_list[0]: ", hiver.hiveserver2_node_list[0])
+        # print("hiver.hiveserver2_node_port: ", hiver.hiveserver2_node_port)
         datahivewriter.set_csv_filepath()
 
         """
@@ -804,12 +804,21 @@ def main_one():
         filename = os.path.basename(datahivewriter.get_csv_filepath())
         hdfsfilepath = hdfser.get_hdfs_base_dir() + "/" + str(hiver.datenowdate) + "/%s" % filename
 
+        # 数据到入的为前一天的数据，所以partition的日期数字-1
+        # cmd: load
+        # data
+        # inpath
+        # '/tmp/20230803/20230803.csv'
+        # into
+        # table
+        # tmp.monitorxjjk
+        # partition(dt='20230802')
         cmd = "load data inpath '%s' into table %s.%s partition(dt='%s')" % (hdfsfilepath,
                                                                               datahivewriter.dataloader.database,
                                                                               datahivewriter.dataloader.table_name,
-                                                                              hiver.datenowdate)
+                                                                              str(int(hiver.datenowdate)-1))
 
-        print(cmd)
+        # print(cmd)
         datahivewriter.set_self_cmd(cmd=cmd)
         datahivewriter.read_jsonfile()
 

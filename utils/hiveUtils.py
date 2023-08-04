@@ -97,10 +97,10 @@ class HIVEUTILS(object):
         #                        database="test_db",
         #                        kerberos_service_name="hive")
 
-        print("host: ", self.host, "\nport: ", self.port, "\nauth: ", self.auth, "\ndatabase: ",
-              self.database,
-              "\nkerberos_service_name: ", self.kerberos_service_name,
-              "\ncmd: ", self.cmd)
+        # print("host: ", self.host, "\nport: ", self.port, "\nauth: ", self.auth, "\ndatabase: ",
+        #       self.database,
+        #       "\nkerberos_service_name: ", self.kerberos_service_name,
+        #       "\ncmd: ", self.cmd)
         # 认证Kerberos
         self.krb5init()
         # 连接

@@ -112,9 +112,15 @@ class HDFSFILETUTILS(object):
         hdfs_base_dir = self.hdfs_base_dir
         dest_dir = "/".join([hdfs_base_dir, datestr])
         curfilepath = self.get_csv_filepath()
-        print("hdfs utils curfilepath: ", curfilepath)
-        print("hdfs utils hdfs_path: ", dest_dir)
-        client.upload(hdfs_path=dest_dir, local_path=curfilepath)
+        # 处理文件路径为前一天的时间日期的路径
+        filename = os.path.basename(curfilepath)
+        date=str(filename).split(".")[0]
+        basedir = os.path.dirname(os.path.dirname(curfilepath))
+        lastdaypath = basedir+"/"+date+"/"+date+".csv"
+
+        # print("hdfs utils curfilepath: ", curfilepath)l
+        # print("hdfs utils hdfs_path: ", dest_dir)
+        client.upload(hdfs_path=dest_dir, local_path=lastdaypath)
 
     # 文件下载，目前用不到，暂时不编辑
     def hfdsget(self):

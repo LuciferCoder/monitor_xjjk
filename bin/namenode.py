@@ -995,6 +995,9 @@ class HDFSCHECk(object):
             self.dataloader.loaddata_main()
         elif self.dataloadtype == "hive":
             self.jsondataAllfields_writer()
+        else:
+            print("self.dataloadtype: ",self.dataloadtype)
+            exit(601)
 
     # 数据写入本地json文件
     # 在其他住区指标的地方，拼接指标dic串，调用此方法写入到本地文件中
@@ -1022,14 +1025,14 @@ class HDFSCHECk(object):
                 jsonfile_keys = jsoncont.keys()
                 fields_dic = "{" + '"' + '":"NULL","'.join(tablefile_list) + '":"NULL"' + "}\n"
                 fields_dic = json.loads(fields_dic)
-                print("fields_dic: ", fields_dic)
+                # print("fields_dic: ", fields_dic)
 
                 for key in jsonfile_keys:
                     value = str(jsoncont[key]).replace("{}","NULL")
                     # fields_list_dic[key] = jsonfile_cont[key]
                     fields_dic["%s" % key] = value
 
-                print("fields_dic_added: ", fields_dic)
+                # print("fields_dic_added: ", fields_dic)
                 csv_filepath = self.csv_filepath
 
                 # 如果日期文件夹不存在，创建日期目录

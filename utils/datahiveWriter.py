@@ -16,6 +16,8 @@ import csv
 
 from bin import dataLoad
 
+import shutil
+
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -97,6 +99,15 @@ class DATAHIVEWRITER(object):
         self.client_keytab_principle = None
         self.client_keytab = None
         self.krb5conf = None
+
+        # hdfs到时导入的文件为前一天的数据文件
+        self.laste_date = None
+
+    def set_laste_date(self,laste_date):
+        self.laste_date = laste_date
+
+    def get_laste_date(self):
+        return self.laste_date
 
     def set_csv_filepath(self):
         self.csv_filepath = BASE_DIR + "%s/%s/%s.csv" % (self.json_path,
@@ -260,6 +271,7 @@ class DATAHIVEWRITER(object):
                 file.close()
 
             # 将生成的全部字段的json文件的值写入到csv文件中，逗号分隔
+            # 每次检查生成的数据为当天日期的文件
             # csv_file = self.csv_file
             csv_file = self.get_csv_file().strip().replace(".json", ".csv")
 
@@ -278,11 +290,19 @@ class DATAHIVEWRITER(object):
             # 追加写入数据到csv目录下日期下的日期.csv文件
             # 创建时间日期文件夹
             path = BASE_DIR + "/csv/%s" % datestring.strip()[0:8]
+            lastdate = str(int(datestring.strip() - 1))[0:8]
+            lastdatepath = BASE_DIR + "/csv/%s" % lastdate
             if os.path.exists(path):
                 pass
             else:
                 os.mkdir(path)
-            # 将数据追加写入到路径 /csv/$(date +%Y%m%f)/$(date +%Y%m%d).csv
+
+            # 如果第一次运行前一天的数据文件不存在，啧复制当前的当天数据文件到前一天日期中
+            if not os.path.exists(lastdatepath):
+                os.mkdir(lastdatepath)
+                shutil.copyfile(path, lastdatepath)
+
+            # 将数据追加写入到路径 /csv/$(date +%Y%m%f)/$(date +%Y%m%d).csv； 当天的日期
             final_csv_all_path = path + "/%s.csv" % datestring.strip()[0:8]
             self.set_final_csv_filepath(final_csv_all_path)
             csv_filepath = self.get_final_csv_filepath()
@@ -326,12 +346,12 @@ class DATAHIVEWRITER(object):
 
                 self.dataloader.set_hiveserver2_ip(hiveserver2_ip)
                 self.dataloader.set_hiveserver2_port(hiveserver2_port)
-                # 传参：/csv/$(date +%y%m%d)/path.csv
+                # 传参：/csv/$(date +%y%m%d)/${date %y%m%d}.csv
                 csv_file_path = self.get_csv_file()
                 self.dataloader.set_csv_filepath(csv_file_path)
                 self.dataloader.set_cmd(cmd=self.cmd)
                 self.dataloader.loaddata_main()
 
         except Exception as e:
-            print("read_jsonfile: " + e)
+            print("read_jsonfile: ", e)
             # print("read_jsonfile: ", e)
