@@ -802,17 +802,11 @@ def main_one():
         # 或者采用去掉local的方法，将文件上传到hdfs上
 
         filename = os.path.basename(datahivewriter.get_csv_filepath())
-        hdfsfilepath = hdfser.get_hdfs_base_dir() + "/" + str(hiver.datenowdate) + "/%s" % filename
+        filename = str(int(str(filename).split(".")[0])-1) + str(filename).split(".")[1]
+        hdfsfilepath = hdfser.get_hdfs_base_dir() + "/" + str(int(str(hiver.datenowdate))-1) + "/%s" % filename
 
         # 数据到入的为前一天的数据，所以partition的日期数字-1
-        # cmd: load
-        # data
-        # inpath
-        # '/tmp/20230803/20230803.csv'
-        # into
-        # table
-        # tmp.monitorxjjk
-        # partition(dt='20230802')
+        # cmd: load data inpath  '/tmp/20230803/20230803.csv' into table tmp.monitorxjjk partition(dt='20230802')
         cmd = "load data inpath '%s' into table %s.%s partition(dt='%s')" % (hdfsfilepath,
                                                                               datahivewriter.dataloader.database,
                                                                               datahivewriter.dataloader.table_name,
