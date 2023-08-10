@@ -154,3 +154,12 @@ rootqueue_usage_percent string  comment '队列资源监控，字符串，root�
 ) partitioned by (dt string comment '按天分区，值等同于字段 date_st')
 row format delimited fields terminated by ',';
 ```
+
+# 定时任务
+```
+30 4 * * * /usr/bin/python3 /export/monitor_xjjk/bin/namenode.py use_crontab="true"
+10 * * * * /usr/bin/python3 /export/monitor_xjjk/bin/resourcemanager.py use_crontab="true"
+10 * * * * /usr/bin/python3 /export/monitor_xjjk/bin/hivePD.py use_crontab="true"
+```
+
+
