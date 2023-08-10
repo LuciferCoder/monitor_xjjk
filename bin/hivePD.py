@@ -18,10 +18,6 @@ import socket
 import paramiko
 from datetime import datetime, timedelta
 
-
-
-
-
 # 设置本地路径
 '''设置路径,添加本地环境路径 项目路径'''
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -173,7 +169,7 @@ class HIVER(object):
             return name, version, cluster_name, hiveconf, krb5conf, client_keytab, client_keytab_principle, \
                    use_kerberos, ssh_user, ssh_pkey, hiveserver2_node_list, hiveserver2_node_port, \
                    metastore_node_list, metastore_node_port, dataload_type, dataload_time, namenode_ip, \
-                   namenode_webport, hdfs_principle,hdfs_keytab
+                   namenode_webport, hdfs_principle, hdfs_keytab
 
     # 脚本参数分析
     # 分析参数确定是否手动执行
@@ -217,7 +213,7 @@ class HIVER(object):
 
     # 所有节点连通性检查，端口探活
     def IsAlivedNode(self):
-        print("调用 isalived 成功")
+        # print("调用 isalived 成功")
         # hiveserver2
         hivesevrer2_node_isalived_list = []
         hiverserver2_port = self.hiveserver2_node_port
@@ -251,7 +247,7 @@ class HIVER(object):
     # 打印down的服务
     # 指标：服务端口探活
     def screeOownServices(self):
-        print("调用打印服务")
+        # print("调用打印服务")
         hivesevrer2_node_isalived_list = self.hivesevrer2_node_isalived_list
         metastore_node_isalived_list = self.metastore_node_isalived_list
 
@@ -720,7 +716,7 @@ def main_one():
         hiver.krb5init()
 
     # 组件状态（大数据端口探活警告）
-    print("is alived start")
+    # print("is alived start")
     hiver.IsAlivedNode()
 
     hiver.hivejmx()
@@ -796,21 +792,20 @@ def main_one():
         # 创建目录以及上传文件的操作需要在执行命令之前上传到hdfs上；传参数到dataloader中进行操作hdfs的文件上传
         datahivewriter.dataloader.set_hdfsclient(hdfser)
 
-
         # 命令可以执行，但是文件需要在hiveserver2的ip服务器上，
         # 需要再编写将文件传输到hiveserver2的方法
         # 或者采用去掉local的方法，将文件上传到hdfs上
 
         filename = os.path.basename(datahivewriter.get_csv_filepath())
-        filename = str(int(str(filename).split(".")[0])-1) + str(filename).split(".")[1]
-        hdfsfilepath = hdfser.get_hdfs_base_dir() + "/" + str(int(str(hiver.datenowdate))-1) + "/%s" % filename
+        filename = str(int(str(filename).split(".")[0]) - 1) + "." + str(filename).split(".")[1]
+        hdfsfilepath = hdfser.get_hdfs_base_dir() + "/" + str(int(str(hiver.datenowdate)) - 1) + "/%s" % filename
 
         # 数据到入的为前一天的数据，所以partition的日期数字-1
         # cmd: load data inpath  '/tmp/20230803/20230803.csv' into table tmp.monitorxjjk partition(dt='20230802')
         cmd = "load data inpath '%s' into table %s.%s partition(dt='%s')" % (hdfsfilepath,
-                                                                              datahivewriter.dataloader.database,
-                                                                              datahivewriter.dataloader.table_name,
-                                                                              str(int(hiver.datenowdate)-1))
+                                                                             datahivewriter.dataloader.database,
+                                                                             datahivewriter.dataloader.table_name,
+                                                                             str(int(hiver.datenowdate) - 1))
 
         # print(cmd)
         datahivewriter.set_self_cmd(cmd=cmd)

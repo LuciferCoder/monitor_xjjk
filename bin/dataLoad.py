@@ -116,7 +116,7 @@ class DATALOADER(object):
     def password_decode(self):
         if self.use_pwd_coding == "true":
             self.password = base64.b64decode(self.password_encoding.encode()).decode()
-            print("password decode complete")
+            # print("password decode complete")
 
     def set_sqllist(self, sqllisted):
         try:
@@ -275,8 +275,8 @@ class DATALOADHIVER(object):
         cmd = self.get_cmd()
         hiveserver2_ip = self.get_hiveserver2_ip()
         hiveserver2_port = self.get_hiveserver2_port()
-        print("dataLoad.py hiveserver2_ip: ", hiveserver2_ip)
-        print("dataLoad.py hiveserver2_port: ", hiveserver2_port)
+        # print("dataLoad.py hiveserver2_ip: ", hiveserver2_ip)
+        # print("dataLoad.py hiveserver2_port: ", hiveserver2_port)
 
         hiver = hvut.HIVEUTILS(host=hiveserver2_ip,
                                port=hiveserver2_port,
@@ -313,11 +313,11 @@ class DATALOADHIVER(object):
         hdfsclient.krb5init()
         # # 创建目录
         # hdfser.hdfsmkdir()
-        print("dataLoad: ", hdfsclient.get_hdfshost())
+        # print("dataLoad: ", hdfsclient.get_hdfshost())
         hdfsclient.hdfsmkdir()
         # # 上传文件,
         # hdfser.hdfsput()
-        # 上传的文件为前一天的文件，当前方法中获取到的文件目录日期为当前时间的；方法中进一步处理
+        # 上传的文件为前一天的文件，当前方法中获取到的文件目录日期为当前时间的
         hdfsclient.hdfsput()
 
         hiver.krb5init()

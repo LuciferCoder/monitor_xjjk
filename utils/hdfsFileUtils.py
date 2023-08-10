@@ -7,6 +7,13 @@ import sys
 import krbticket
 from hdfs.ext.kerberos import KerberosClient
 import requests
+import shutil
+# import warnings
+import logging
+
+# logging.basicConfig(level=logging.DEBUG)
+
+# warnings.filterwarnings("DEBUG")
 
 # import logging
 
@@ -108,19 +115,42 @@ class HDFSFILETUTILS(object):
     # 文件按上传
     def hdfsput(self):
         client = self.get_hdfs_client()
-        datestr = str(self.get_date_date())[0:8]
+        datestr = str(int(str(self.get_date_date())[0:8]) - 1)
         hdfs_base_dir = self.hdfs_base_dir
-        dest_dir = "/".join([hdfs_base_dir, datestr])
+        dest_dir = "/".join([hdfs_base_dir, datestr, datestr+".csv"])
+        # print(dest_dir)
         curfilepath = self.get_csv_filepath()
         # 处理文件路径为前一天的时间日期的路径
         filename = os.path.basename(curfilepath)
-        date=str(filename).split(".")[0]
+        # 2023年8月7日14:42:18 修改date为前一天的日期
+        date = str(int(str(filename).split(".")[0]) - 1)
+        curdate = str(filename).split(".")[0]
         basedir = os.path.dirname(os.path.dirname(curfilepath))
-        lastdaypath = basedir+"/"+date+"/"+date+".csv"
+        lastdaypath = basedir + "/" + date + "/" + date + ".csv"
+        curdaupath = basedir + "/" + curdate + "/" + curdate + ".csv"
 
         # print("hdfs utils curfilepath: ", curfilepath)l
         # print("hdfs utils hdfs_path: ", dest_dir)
-        client.upload(hdfs_path=dest_dir, local_path=lastdaypath)
+        if not os.path.exists(lastdaypath):
+            os.mkdir(os.path.dirname(lastdaypath))
+            if os.path.exists(curdaupath):
+                shutil.copyfile(src=curdaupath, dst=lastdaypath)
+            try:
+                client.delete(hdfs_path=dest_dir)
+                # client.delete(hdfs_path=os.path.dirname(dest_dir))
+                client.upload(hdfs_path=dest_dir, local_path=lastdaypath)
+            except Exception as e:
+                print(e)
+        else:
+            try:
+                # 删除文件
+                client.delete(hdfs_path=dest_dir)
+                # 删除文件夹
+                # client.delete(hdfs_path=os.path.dirname(dest_dir))
+                # 上传文件
+                client.upload(hdfs_path=dest_dir, local_path=lastdaypath)
+            except Exception as e:
+                print(e)
 
     # 文件下载，目前用不到，暂时不编辑
     def hfdsget(self):
@@ -130,26 +160,35 @@ class HDFSFILETUTILS(object):
     def hdfsdel(self):
         client = self.get_hdfs_client()
         # client = HdfsClient(hosts="localhost:50070")
-        datestr = str(self.get_date_date())[0:8]
+        datestr = str(int(str(self.get_date_date())[0:8])-1)
         hdfs_base_dir = self.hdfs_base_dir
         dest_dir = "/".join([hdfs_base_dir, datestr])
         curfilepath = self.get_csv_filepath()
         filename = os.path.basename(curfilepath)
+        filename = str(int(str(filename).split(".")[0])-1) + "." + str(filename).split(".")[1]
         path = dest_dir + "/" + filename
+        # 删除文件
         client.delete(hdfs_path=path)
+        # 2023年8月7日14:43:12 增加删除文件夹
+        client.delete(hdfs_path=os.path.dirname(path))
 
     # 创建文件夹目录
     def hdfsmkdir(self):
         client = self.get_hdfs_client()
         # client = HdfsClient(hosts="localhost:50070")
-        datestr = str(self.get_date_date())[0:8]
+        # 创建前一天的目录文件夹
+        datestr = str(int(str(self.get_date_date())[0:8]) - 1)
         hdfs_base_dir = self.hdfs_base_dir
         dest_dir = "/".join([hdfs_base_dir, datestr])
         # curfilepath = self.get_csv_filepath()
         # filename = os.path.basename(curfilepath)
         # path = dest_dir + "/" + filename
         # client.mkdirs(dest_dir)
-        client.makedirs(hdfs_path=dest_dir, permission='755')
+        try:
+            client.delete(hdfs_path=dest_dir)
+            client.makedirs(hdfs_path=dest_dir, permission='755')
+        except Exception as e:
+            print(e)
 
     # kerberos认证
     # 如果使用了kerberos，调用此方法

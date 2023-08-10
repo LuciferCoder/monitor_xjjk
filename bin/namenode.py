@@ -996,7 +996,7 @@ class HDFSCHECk(object):
         elif self.dataloadtype == "hive":
             self.jsondataAllfields_writer()
         else:
-            print("self.dataloadtype: ",self.dataloadtype)
+            # print("self.dataloadtype: ",self.dataloadtype)
             exit(601)
 
     # 数据写入本地json文件

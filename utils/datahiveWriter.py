@@ -248,13 +248,13 @@ class DATAHIVEWRITER(object):
                     AppPending":"NULL",NodeManager_healthy":"NULL",yarn_nospace":"NULL",Apppending_longten":"NULL",
                     rootqueue_usage_percent"'}
                     """
-                    print("fields_list_dic: ", fields_list_dic)
-                    print("fields_list_dic type: ", type(fields_list_dic))
+                    # print("fields_list_dic: ", fields_list_dic)
+                    # print("fields_list_dic type: ", type(fields_list_dic))
                     fields_list_dic = json.loads(fields_list_dic)
-                    print("fields_list_dic type: ", type(fields_list_dic))
-
-                    print("json_cont: ", json_cont)
-                    print("json_cont type", type(json_cont))
+                    # print("fields_list_dic type: ", type(fields_list_dic))
+                    #
+                    # print("json_cont: ", json_cont)
+                    # print("json_cont type", type(json_cont))
 
                     for key in jsonfile_keys:
                         value = json_cont[key]
@@ -321,12 +321,12 @@ class DATAHIVEWRITER(object):
             dataload_time = self.get_dataload_time()
             datestring = self.get_datestring()
             if str(dataload_time).strip().replace(":", "") == str(datestring).strip()[8:-2]:
-                print("datahiveWriter: ", self.dataload_time.strip().replace(":", ""), " ",
-                      self.datestring.strip()[8:-2])
+                # print("datahiveWriter: ", self.dataload_time.strip().replace(":", ""), " ",
+                #       self.datestring.strip()[8:-2])
                 hiveserver2_ip = self.get_hiveserver2_ip()
                 hiveserver2_port = self.get_hiveserver2_port()
-                print("datahiveWriter.py hiveserver2_ip： ", hiveserver2_ip)
-                print("datahiveWriter.py hiveserver2_port： ", hiveserver2_port)
+                # print("datahiveWriter.py hiveserver2_ip： ", hiveserver2_ip)
+                # print("datahiveWriter.py hiveserver2_port： ", hiveserver2_port)
 
                 """
                 传参数到hiveUtils,进行kerberos认证
