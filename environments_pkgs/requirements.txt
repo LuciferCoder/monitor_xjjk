@@ -40,3 +40,8 @@ sasl==0.3.1
 pykerberos==1.2.4
 paramiko==3.2.0
 pyspnego==0.5.4
+krb5==0.3.0
+thrift==0.16.0
+thrift_sasl==0.4.3
+requests_kerberos==0.14.0
+

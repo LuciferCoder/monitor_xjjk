@@ -396,7 +396,7 @@ class HIVER(object):
             use_pwd = "false"
             ssh_keyfile = self.ssh_pkey
 
-            cmd = "ps -ef |grep org.apache.hive.service.server.HiveServer2|grep -v grep|awk '{print $2}'"
+            cmd = "sudo ps -ef |grep org.apache.hive.service.server.HiveServer2|grep -v grep|awk '{print $2}'"
 
             service_pid = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             service_pid = service_pid.decode()
@@ -433,7 +433,7 @@ class HIVER(object):
             heapusage = usage
 
             # gc time
-            cmd = " source /etc/profile;jstat -gcutil %s 5000 1" % service_pid
+            cmd = " source /etc/profile;sudo ${JAVA_HOME}/bin/jstat -gcutil %s 5000 1" % service_pid
             gc_cont = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             # gc_time = int(.strip().split()[-2])
             gc_contl = str(gc_cont).strip().split("\\n")[1]
@@ -474,7 +474,7 @@ class HIVER(object):
             hostname = hostname
             client_num = 0
 
-            cmdwcclient = "netstat -lantup |grep 10000|grep ESTABLISHED|wc -l"
+            cmdwcclient = "sudo netstat -lantup |grep 10000|grep ESTABLISHED|wc -l"
             client_num_encode = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmdwcclient)
             client_num = client_num_encode.decode().strip()
 
@@ -511,7 +511,7 @@ class HIVER(object):
             use_pwd = "false"
             ssh_keyfile = self.ssh_pkey
 
-            cmd = "ps -ef |grep hive.metastore.HiveMetaStore|grep -v grep|awk '{print $2}'"
+            cmd = "sudo ps -ef |grep hive.metastore.HiveMetaStore|grep -v grep|awk '{print $2}'"
 
             service_pid = self.ssh_connect(ip, port, user, password, use_pwd, ssh_keyfile, cmd)
             service_pid = service_pid.decode()
